@@ -1,46 +1,51 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '@/styles/commonStyles';
 import { useTheme } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { colors } from '@/styles/commonStyles';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface XPBarProps {
-  level: number;
   xp: number;
-  xpToNextLevel: number;
+  level: number;
+  xpToNextLevel?: number;
 }
 
-export default function XPBar({ level, xp, xpToNextLevel }: XPBarProps) {
+export default function XPBar({ xp, level, xpToNextLevel = 100 }: XPBarProps) {
   const theme = useTheme();
-  const progress = (xp / xpToNextLevel) * 100;
+  const progress = Math.min((xp / xpToNextLevel) * 100, 100);
 
   return (
-    <View style={[
-      styles.container,
-      { 
-        backgroundColor: theme.dark ? colors.cardDark : colors.card,
-        borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-      }
-    ]}>
+    <Animated.View 
+      entering={FadeIn}
+      style={[
+        styles.container,
+        { 
+          backgroundColor: theme.dark ? colors.cardDark : colors.card,
+          borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
+        }
+      ]}
+    >
       <View style={styles.header}>
         <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>LVL {level}</Text>
+          <Text style={styles.levelText}>Lv {level}</Text>
         </View>
         <Text style={[styles.xpText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
           {xp} / {xpToNextLevel} XP
         </Text>
       </View>
-      
-      <View style={styles.progressBar}>
-        <LinearGradient
-          colors={[colors.primary, colors.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.progressFill, { width: `${progress}%` }]}
+      <View style={[styles.progressBarContainer, { backgroundColor: theme.dark ? '#2D2D2D' : '#EEEEEE' }]}>
+        <View 
+          style={[
+            styles.progressBar, 
+            { 
+              width: `${progress}%`,
+              backgroundColor: colors.xpGold,
+            }
+          ]} 
         />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -60,10 +65,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   levelBadge: {
-    backgroundColor: colors.levelBadge,
+    backgroundColor: colors.xpGold,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 12,
   },
   levelText: {
     color: '#FFFFFF',
@@ -74,14 +79,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  progressBar: {
-    height: 10,
-    backgroundColor: colors.backgroundAlt,
-    borderRadius: 5,
+  progressBarContainer: {
+    height: 8,
+    borderRadius: 4,
     overflow: 'hidden',
   },
-  progressFill: {
+  progressBar: {
     height: '100%',
-    borderRadius: 5,
+    borderRadius: 4,
   },
 });

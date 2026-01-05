@@ -1,10 +1,6 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { IconSymbol } from './IconSymbol';
-import { Habit } from '@/types/habit';
-import { colors } from '@/styles/commonStyles';
-import { useTheme } from '@react-navigation/native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -12,6 +8,10 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { IconSymbol } from './IconSymbol';
+import { useTheme } from '@react-navigation/native';
+import { colors } from '@/styles/commonStyles';
+import { Habit } from '@/types/habit';
 
 interface HabitCardProps {
   habit: Habit;
@@ -23,138 +23,110 @@ interface HabitCardProps {
 export default function HabitCard({ habit, onCheckIn, onPress, isCheckedToday = false }: HabitCardProps) {
   const theme = useTheme();
   const scale = useSharedValue(1);
-  const checkScale = useSharedValue(1);
 
-  const cardStyle = useAnimatedStyle(() => ({
+  const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-  }));
-
-  const checkButtonStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
   }));
 
   const handleCheckIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    
-    // Animate check button
-    checkScale.value = withSequence(
-      withSpring(1.2, { damping: 10 }),
+    scale.value = withSequence(
+      withSpring(0.95, { damping: 10 }),
       withSpring(1, { damping: 10 })
     );
-    
     onCheckIn();
   };
 
   const getStreakColor = () => {
-    if (habit.currentStreak >= 7) return colors.success;
-    if (habit.currentStreak >= 3) return colors.warning;
-    return colors.textSecondary;
+    if (habit.currentStreak >= 30) return colors.streakGold;
+    if (habit.currentStreak >= 7) return colors.streakSilver;
+    return colors.accent;
   };
 
   const getStrengthColor = () => {
-    if (habit.habitStrength >= 70) return colors.strengthStrong;
-    if (habit.habitStrength >= 40) return colors.strengthMedium;
-    return colors.strengthWeak;
+    if (habit.habitStrength >= 80) return colors.success;
+    if (habit.habitStrength >= 50) return colors.warning;
+    return colors.error;
   };
 
+  // Parse icon if it's an object
+  const iconData = typeof habit.icon === 'string' 
+    ? { ios: habit.icon, android: habit.icon } 
+    : habit.icon;
+
   return (
-    <Animated.View style={cardStyle}>
+    <Animated.View style={animatedStyle}>
       <TouchableOpacity
         style={[
           styles.card,
           { 
             backgroundColor: theme.dark ? colors.cardDark : colors.card,
-            borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
+            borderColor: habit.color,
           }
         ]}
         onPress={onPress}
         activeOpacity={0.7}
       >
-        <View style={styles.cardHeader}>
-          <View style={styles.habitInfo}>
-            <View style={[styles.iconContainer, { backgroundColor: habit.color + '20' }]}>
-              <IconSymbol
-                ios_icon_name={habit.icon}
-                android_material_icon_name={habit.icon}
-                size={24}
-                color={habit.color}
-              />
-            </View>
-            <View style={styles.habitText}>
-              <Text style={[styles.habitTitle, { color: theme.dark ? colors.textDark : colors.text }]}>
-                {habit.title}
-              </Text>
-              <View style={styles.tagsContainer}>
-                {habit.tags.slice(0, 2).map((tag, index) => (
-                  <View key={index} style={[styles.tag, { backgroundColor: habit.color + '15' }]}>
-                    <Text style={[styles.tagText, { color: habit.color }]}>{tag}</Text>
-                  </View>
-                ))}
+        <View style={styles.content}>
+          {/* Icon */}
+          <View style={[styles.iconContainer, { backgroundColor: habit.color + '20' }]}>
+            <IconSymbol
+              ios_icon_name={iconData.ios}
+              android_material_icon_name={iconData.android}
+              size={28}
+              color={habit.color}
+            />
+          </View>
+
+          {/* Info */}
+          <View style={styles.info}>
+            <Text style={[styles.title, { color: theme.dark ? colors.textDark : colors.text }]}>
+              {habit.title}
+            </Text>
+            <View style={styles.stats}>
+              <View style={styles.stat}>
+                <IconSymbol
+                  ios_icon_name="flame.fill"
+                  android_material_icon_name="local-fire-department"
+                  size={14}
+                  color={getStreakColor()}
+                />
+                <Text style={[styles.statText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
+                  {habit.currentStreak} day streak
+                </Text>
+              </View>
+              <View style={styles.stat}>
+                <IconSymbol
+                  ios_icon_name="chart.bar.fill"
+                  android_material_icon_name="bar-chart"
+                  size={14}
+                  color={getStrengthColor()}
+                />
+                <Text style={[styles.statText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
+                  {Math.round(habit.habitStrength || 0)}% strength
+                </Text>
               </View>
             </View>
           </View>
-          
-          <Animated.View style={checkButtonStyle}>
-            <TouchableOpacity
-              style={[
-                styles.checkButton,
-                isCheckedToday && { backgroundColor: colors.success }
-              ]}
-              onPress={handleCheckIn}
-              disabled={isCheckedToday}
-            >
-              {isCheckedToday ? (
-                <IconSymbol
-                  ios_icon_name="check"
-                  android_material_icon_name="check"
-                  size={24}
-                  color="#FFFFFF"
-                />
-              ) : (
-                <View style={[styles.checkCircle, { borderColor: habit.color }]} />
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
+          {/* Check-in Button */}
+          <TouchableOpacity
+            style={[
+              styles.checkButton,
+              { 
+                backgroundColor: isCheckedToday ? colors.success : habit.color,
+              }
+            ]}
+            onPress={handleCheckIn}
+            activeOpacity={0.8}
+          >
             <IconSymbol
-              ios_icon_name="local-fire-department"
-              android_material_icon_name="local-fire-department"
-              size={16}
-              color={getStreakColor()}
+              ios_icon_name={isCheckedToday ? 'checkmark' : 'plus'}
+              android_material_icon_name={isCheckedToday ? 'check' : 'add'}
+              size={24}
+              color="#FFFFFF"
             />
-            <Text style={[styles.statText, { color: getStreakColor() }]}>
-              {habit.currentStreak} day streak
-            </Text>
-          </View>
-          
-          <View style={styles.stat}>
-            <Text style={[styles.statText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-              {habit.consistencyPercent}% consistent
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.strengthContainer}>
-          <Text style={[styles.strengthLabel, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-            Habit Strength
-          </Text>
-          <View style={styles.strengthBar}>
-            <View 
-              style={[
-                styles.strengthFill, 
-                { 
-                  width: `${habit.habitStrength}%`,
-                  backgroundColor: getStrengthColor()
-                }
-              ]} 
-            />
-          </View>
-          <Text style={[styles.strengthPercent, { color: getStrengthColor() }]}>
-            {habit.habitStrength}%
-          </Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -166,71 +138,33 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
+    borderLeftWidth: 4,
     boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
     elevation: 2,
   },
-  cardHeader: {
+  content: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  habitInfo: {
-    flexDirection: 'row',
-    flex: 1,
-    marginRight: 12,
+    alignItems: 'center',
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  habitText: {
+  info: {
     flex: 1,
   },
-  habitTitle: {
+  title: {
     fontSize: 17,
     fontWeight: '600',
     marginBottom: 6,
   },
-  tagsContainer: {
+  stats: {
     flexDirection: 'row',
-    gap: 6,
-  },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  checkButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.backgroundAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 3,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    gap: 12,
   },
   stat: {
     flexDirection: 'row',
@@ -241,26 +175,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  strengthContainer: {
-    gap: 6,
-  },
-  strengthLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  strengthBar: {
-    height: 6,
-    backgroundColor: colors.backgroundAlt,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  strengthFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  strengthPercent: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
+  checkButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
   },
 });

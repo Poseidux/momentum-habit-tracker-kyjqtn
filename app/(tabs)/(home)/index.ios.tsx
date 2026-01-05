@@ -1,180 +1,118 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Platform } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '@react-navigation/native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/IconSymbol';
-import { colors } from '@/styles/commonStyles';
-import { useHabits, useUserStats } from '@/hooks/useHabits';
 import HabitCard from '@/components/HabitCard';
 import XPBar from '@/components/XPBar';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
+import { useHabits, useUserStats } from '@/hooks/useHabits';
 
 export default function TodayScreen() {
-  const theme = useTheme();
-  const router = useRouter();
-  const { habits, loading, checkInHabit, refreshHabits } = useHabits();
-  const { stats, refreshStats } = useUserStats();
   const [refreshing, setRefreshing] = useState(false);
-  const [checkedHabits, setCheckedHabits] = useState<Set<string>>(new Set());
+  const { habits, loading, checkInHabit, refreshHabits } = useHabits();
+  const { stats } = useUserStats();
+  const router = useRouter();
+  const theme = useTheme();
 
   const onRefresh = async () => {
     setRefreshing(true);
-    try {
-      await Promise.all([refreshHabits(), refreshStats()]);
-    } catch (error) {
-      console.error('[TodayScreen] Error refreshing:', error);
-    } finally {
-      setRefreshing(false);
-    }
+    await refreshHabits();
+    setRefreshing(false);
   };
 
   const handleCheckIn = async (habitId: string) => {
-    if (checkedHabits.has(habitId)) return;
-    
     try {
-      await checkInHabit(habitId);
-      setCheckedHabits(new Set([...checkedHabits, habitId]));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error: any) {
-      console.error('[TodayScreen] Error checking in habit:', error);
-      Alert.alert('Error', error.message || 'Failed to record check-in. Please try again.');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // TODO: Backend Integration - Record check-in via API endpoint
+      await checkInHabit(habitId, 1);
+      Alert.alert('✨ Great job!', 'Keep up the momentum!');
+    } catch (error) {
+      console.error('Check-in error:', error);
+      Alert.alert('Error', 'Failed to check in. Please try again.');
     }
   };
 
   const handleHabitPress = (habitId: string) => {
-    router.push(`/habit/${habitId}`);
+    router.push(`/habit/${habitId}` as any);
   };
 
   const handleAddHabit = () => {
-    router.push('/add-habit');
+    router.push('/add-habit' as any);
   };
 
-  const allHabitsChecked = habits.length > 0 && checkedHabits.size === habits.length;
+  const todayHabits = habits.filter(h => {
+    const today = new Date().getDay();
+    if (h.schedule === 'daily') return true;
+    return true;
+  });
 
   return (
-    <SafeAreaView 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: theme.dark ? colors.backgroundDark : colors.background,
-        }
-      ]}
-      edges={['top']}
-    >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header - Moved up with less padding */}
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: theme.dark ? colors.textDark : colors.text }]}>
-              Today
-            </Text>
-            <Text style={[styles.date, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: theme.colors.text }]}>Today</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text, opacity: 0.6 }]}>
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </Text>
           </View>
-        </View>
 
-        {/* XP Bar */}
-        <Animated.View entering={FadeIn.delay(100)}>
-          <XPBar level={stats.level} xp={stats.xp} xpToNextLevel={stats.xpToNextLevel} />
-        </Animated.View>
+          {stats && <XPBar xp={stats.xp} level={stats.level} />}
 
-        {/* All Done Celebration */}
-        {allHabitsChecked && (
-          <Animated.View 
-            entering={FadeInDown.springify()}
-            style={[
-              styles.celebrationCard,
-              { 
-                backgroundColor: colors.success + '15',
-                borderColor: colors.success + '30',
-              }
-            ]}
-          >
-            <IconSymbol
-              ios_icon_name="checkmark.circle.fill"
-              android_material_icon_name="check-circle"
-              size={32}
-              color={colors.success}
-            />
-            <Text style={[styles.celebrationText, { color: colors.success }]}>
-              All done for today! 🎉
-            </Text>
-            <Text style={[styles.celebrationSubtext, { color: colors.success }]}>
-              You&apos;re building amazing momentum!
-            </Text>
-          </Animated.View>
-        )}
-
-        {/* Habits List */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.dark ? colors.textDark : colors.text }]}>
-            Your Habits
-          </Text>
-          
-          {loading ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Loading your habits...
-              </Text>
-            </View>
-          ) : habits.length === 0 ? (
-            <View style={styles.emptyState}>
-              <IconSymbol
-                ios_icon_name="plus.circle"
-                android_material_icon_name="add-circle"
-                size={64}
-                color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
-              />
-              <Text style={[styles.emptyText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                No habits yet
-              </Text>
-              <Text style={[styles.emptySubtext, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Tap the + button to create your first habit
-              </Text>
-            </View>
-          ) : (
-            habits.map((habit, index) => (
-              <Animated.View key={habit.id} entering={FadeInDown.delay(index * 100)}>
-                <HabitCard
-                  habit={habit}
-                  onCheckIn={() => handleCheckIn(habit.id)}
-                  onPress={() => handleHabitPress(habit.id)}
-                  isCheckedToday={checkedHabits.has(habit.id)}
+          <View style={styles.habitsContainer}>
+            {loading ? (
+              <Text style={[styles.emptyText, { color: theme.colors.text }]}>Loading...</Text>
+            ) : todayHabits.length === 0 ? (
+              <View style={styles.emptyState}>
+                <IconSymbol 
+                  ios_icon_name="sparkles" 
+                  android_material_icon_name="auto-awesome" 
+                  size={48} 
+                  color={theme.colors.text} 
+                  style={{ opacity: 0.3 }} 
                 />
-              </Animated.View>
-            ))
-          )}
-        </View>
+                <Text style={[styles.emptyText, { color: theme.colors.text }]}>No habits yet</Text>
+                <Text style={[styles.emptySubtext, { color: theme.colors.text }]}>
+                  Tap the + button to create your first habit
+                </Text>
+              </View>
+            ) : (
+              todayHabits.map((habit, index) => (
+                <Animated.View key={habit.id} entering={FadeInDown.delay(index * 100)}>
+                  <HabitCard
+                    habit={habit}
+                    onCheckIn={() => handleCheckIn(habit.id)}
+                    onPress={() => handleHabitPress(habit.id)}
+                  />
+                </Animated.View>
+              ))
+            )}
+          </View>
+        </ScrollView>
 
-        {/* Bottom padding for floating tab bar */}
-        <View style={{ height: 120 }} />
-      </ScrollView>
-
-      {/* Floating Add Button */}
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={handleAddHabit}
-        activeOpacity={0.8}
-      >
-        <IconSymbol
-          ios_icon_name="plus"
-          android_material_icon_name="add"
-          size={28}
-          color="#FFFFFF"
-        />
-      </TouchableOpacity>
-    </SafeAreaView>
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: '#007AFF' }]}
+          onPress={handleAddHabit}
+          activeOpacity={0.8}
+        >
+          <IconSymbol 
+            ios_icon_name="plus" 
+            android_material_icon_name="add" 
+            size={28} 
+            color="#FFFFFF" 
+          />
+        </TouchableOpacity>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -182,49 +120,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 8, // Reduced from 20 to move content up
+    paddingBottom: 100,
   },
   header: {
-    marginBottom: 16, // Reduced from 24 to move content up
+    marginTop: 0,
+    marginBottom: 20,
   },
-  greeting: {
-    fontSize: 32,
-    fontWeight: '800',
+  title: {
+    fontSize: 34,
+    fontWeight: 'bold',
     marginBottom: 4,
   },
-  date: {
-    fontSize: 16,
-    fontWeight: '500',
+  subtitle: {
+    fontSize: 15,
   },
-  celebrationCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  celebrationText: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 12,
-  },
-  celebrationSubtext: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 16,
+  habitsContainer: {
+    marginTop: 20,
+    gap: 12,
   },
   emptyState: {
     alignItems: 'center',
@@ -232,26 +146,29 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     marginTop: 16,
+    opacity: 0.5,
   },
   emptySubtext: {
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 15,
     marginTop: 8,
-    textAlign: 'center',
+    opacity: 0.4,
   },
-  fab: {
+  addButton: {
     position: 'absolute',
-    right: 20,
     bottom: 100,
+    right: 20,
     width: 56,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 8,
   },
 });

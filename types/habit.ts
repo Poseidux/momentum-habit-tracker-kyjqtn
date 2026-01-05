@@ -1,7 +1,33 @@
 
 export type HabitType = 'yes_no' | 'count' | 'duration';
 export type HabitSchedule = 'daily' | 'specific_days' | 'x_per_week';
-export type HabitTag = 'Health' | 'Study' | 'Mind' | 'Fitness' | 'Work' | 'Social' | 'Creative' | 'Finance';
+export type HabitTag = 'Health' | 'Fitness' | 'Mind' | 'Study' | 'Work' | 'Social' | 'Creative' | 'Finance' | 'Home' | 'Other';
+
+export const HABIT_TAGS: HabitTag[] = ['Health', 'Fitness', 'Mind', 'Study', 'Work', 'Social', 'Creative', 'Finance', 'Home', 'Other'];
+
+export const HABIT_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+  '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'
+];
+
+// Icon definitions with both iOS SF Symbols and Android Material Icons
+export const HABIT_ICONS = [
+  { ios: 'figure.walk', android: 'directions-walk' },
+  { ios: 'book.fill', android: 'menu-book' },
+  { ios: 'brain.head.profile', android: 'psychology' },
+  { ios: 'heart.fill', android: 'favorite' },
+  { ios: 'leaf.fill', android: 'eco' },
+  { ios: 'flame.fill', android: 'local-fire-department' },
+  { ios: 'drop.fill', android: 'water-drop' },
+  { ios: 'moon.stars.fill', android: 'nightlight' },
+  { ios: 'sun.max.fill', android: 'wb-sunny' },
+  { ios: 'star.fill', android: 'star' },
+  { ios: 'bolt.fill', android: 'bolt' },
+  { ios: 'sparkles', android: 'auto-awesome' },
+  { ios: 'trophy.fill', android: 'emoji-events' },
+  { ios: 'dumbbell.fill', android: 'fitness-center' },
+  { ios: 'checkmark.circle.fill', android: 'check-circle' },
+];
 
 export interface Habit {
   id: string;
@@ -9,32 +35,32 @@ export interface Habit {
   description?: string;
   type: HabitType;
   schedule: HabitSchedule;
-  specificDays?: number[]; // 0-6 for Sunday-Saturday
+  specificDays?: number[];
   timesPerWeek?: number;
-  tags: HabitTag[];
-  customTags?: string[]; // Premium feature: custom user-defined tags
   color: string;
   icon: string;
-  reminderTime?: string;
-  createdAt: string;
-  
-  // Progress tracking
+  customIconUrl?: string;
+  tags: string[];
+  customTags?: string[];
+  targetValue?: number;
   currentStreak: number;
   longestStreak: number;
   totalCompletions: number;
   consistencyPercent: number;
-  habitStrength: number; // 0-100
+  habitStrength: number;
+  reminderTime?: string;
+  createdAt: string;
 }
 
 export interface HabitCheckIn {
   id: string;
   habitId: string;
-  date: string; // ISO date string
+  date: string;
   completed: boolean;
-  value?: number; // For count/duration types
+  value?: number;
   note?: string;
-  mood?: number; // 1-5
-  effort?: number; // 1-5
+  mood?: number;
+  effort?: number;
   createdAt: string;
 }
 
@@ -45,41 +71,17 @@ export interface UserStats {
   totalHabits: number;
   activeHabits: number;
   totalCheckIns: number;
+  currentStreak?: number;
   currentWeekStreak: number;
-  currentStreak?: number; // Overall current streak
-  consistency?: number; // Overall consistency percentage
-  isPremium?: boolean; // Premium status
+  longestStreak?: number;
+  consistency?: number;
+  isPremium: boolean;
 }
 
-export const HABIT_COLORS = [
-  '#6366F1', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B',
-  '#10B981', '#06B6D4', '#3B82F6', '#6366F1', '#A855F7',
-];
-
-// Material Design Icons - verified names that work on Android/web
-export const HABIT_ICONS = [
-  'fitness-center',
-  'local-library',
-  'self-improvement',
-  'restaurant',
-  'bedtime',
-  'directions-run',
-  'water-drop',
-  'psychology',
-  'work',
-  'brush',
-  'music-note',
-  'savings',
-  'favorite',
-  'spa',
-  'emoji-events',
-  'lightbulb',
-  'coffee',
-  'pets',
-  'park',
-  'beach-access',
-];
-
-export const HABIT_TAGS: HabitTag[] = [
-  'Health', 'Study', 'Mind', 'Fitness', 'Work', 'Social', 'Creative', 'Finance'
-];
+export interface Insights {
+  mostConsistentDay?: string;
+  bestTime?: string;
+  weeklyTrend: 'improving' | 'stable' | 'declining';
+  onTrackPercentage: number;
+  weeklyReview: string;
+}
