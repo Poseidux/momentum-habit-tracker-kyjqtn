@@ -4,6 +4,8 @@ import * as authSchema from './db/auth-schema.js';
 import { registerHabitRoutes } from './routes/habits.js';
 import { registerCheckInRoutes } from './routes/check-ins.js';
 import { registerStatsRoutes } from './routes/stats.js';
+import { registerHabitGroupRoutes } from './routes/habit-groups.js';
+import { registerThemesRoutes } from './routes/themes.js';
 
 // Combine both app and auth schemas
 const schema = { ...appSchema, ...authSchema };
@@ -21,6 +23,8 @@ app.withAuth();
 registerHabitRoutes(app);
 registerCheckInRoutes(app);
 registerStatsRoutes(app);
+registerHabitGroupRoutes(app);
+registerThemesRoutes(app);
 
 await app.run();
 app.logger.info('Habit tracking API running');
