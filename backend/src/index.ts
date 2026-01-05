@@ -1,8 +1,12 @@
 import { createApplication } from "@specific-dev/framework";
-import * as schema from './db/schema.js';
+import * as appSchema from './db/schema.js';
+import * as authSchema from './db/auth-schema.js';
+import { registerHabitRoutes } from './routes/habits.js';
+import { registerCheckInRoutes } from './routes/check-ins.js';
+import { registerStatsRoutes } from './routes/stats.js';
 
-// Import route registration functions
-// import { registerUserRoutes } from './routes/users.js';
+// Combine both app and auth schemas
+const schema = { ...appSchema, ...authSchema };
 
 // Create application with schema for full database type support
 export const app = await createApplication(schema);
@@ -10,9 +14,13 @@ export const app = await createApplication(schema);
 // Export App type for use in route files
 export type App = typeof app;
 
-// Register routes - add your route modules here
-// IMPORTANT: Always use registration functions to avoid circular dependency issues
-// registerUserRoutes(app);
+// Set up Better Auth (automatically enables email/password, Google OAuth, and Apple OAuth via proxy)
+app.withAuth();
+
+// Register all routes AFTER app is created
+registerHabitRoutes(app);
+registerCheckInRoutes(app);
+registerStatsRoutes(app);
 
 await app.run();
-app.logger.info('Application running');
+app.logger.info('Habit tracking API running');
