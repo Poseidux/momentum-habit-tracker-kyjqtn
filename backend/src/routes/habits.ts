@@ -1,12 +1,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { eq, and, isNull, desc, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, count } from 'drizzle-orm';
 import type { App } from '../index.js';
 import * as schema from '../db/schema.js';
+import * as authSchema from '../db/auth-schema.js';
 
 export function registerHabitRoutes(app: App) {
   const requireAuth = app.requireAuth();
 
-  // POST /api/habits - Create a new habit
+  // POST /api/habits - Create a new habit (check user's habit count)
   app.fastify.post(
     '/api/habits',
     {
@@ -15,18 +16,17 @@ export function registerHabitRoutes(app: App) {
         tags: ['habits'],
         body: {
           type: 'object',
-          required: ['title', 'habitType', 'scheduleType'],
+          required: ['title', 'type'],
           properties: {
             title: { type: 'string' },
             description: { type: 'string' },
-            habitType: { type: 'string', enum: ['yes_no', 'count', 'duration'] },
-            targetValue: { type: 'integer' },
-            scheduleType: { type: 'string', enum: ['daily', 'specific_days', 'times_per_week'] },
-            scheduleConfig: { type: 'object' },
+            type: { type: 'string', enum: ['yes_no', 'count', 'duration'] },
+            schedule: { type: 'string' },
+            frequency: { type: 'integer' },
             tags: { type: 'array', items: { type: 'string' } },
-            color: { type: 'string' },
+            customTags: { type: 'array', items: { type: 'string' } },
             icon: { type: 'string' },
-            reminderTime: { type: 'string' },
+            color: { type: 'string' },
           },
         },
       },
@@ -38,15 +38,37 @@ export function registerHabitRoutes(app: App) {
       const {
         title,
         description,
-        habitType = 'yes_no',
-        targetValue,
-        scheduleType = 'daily',
-        scheduleConfig,
+        type = 'yes_no',
+        schedule,
+        frequency,
         tags = [],
-        color = '#3b82f6',
+        customTags = [],
         icon = 'circle',
-        reminderTime,
+        color = '#3b82f6',
       } = request.body as any;
+
+      // Get user to check premium status
+      const currentUser = await app.db.query.user.findFirst({
+        where: eq(authSchema.user.id, session.user.id),
+      });
+
+      if (!currentUser) {
+        return reply.code(404).send({ message: 'User not found' });
+      }
+
+      // Check habit limit for non-premium users
+      if (!currentUser.isPremium) {
+        const [{ habitCount: userHabitCount }] = await app.db
+          .select({ habitCount: count() })
+          .from(schema.habits)
+          .where(eq(schema.habits.userId, session.user.id));
+
+        if ((userHabitCount as number) >= 3) {
+          return reply.code(403).send({
+            message: 'Free users can only create up to 3 habits. Upgrade to premium for unlimited habits.',
+          });
+        }
+      }
 
       const [habit] = await app.db
         .insert(schema.habits)
@@ -54,14 +76,13 @@ export function registerHabitRoutes(app: App) {
           userId: session.user.id,
           title,
           description,
-          habitType: habitType as any,
-          targetValue,
-          scheduleType: scheduleType as any,
-          scheduleConfig,
+          type: type as any,
+          schedule,
+          frequency,
           tags,
-          color,
+          customTags: currentUser.isPremium ? customTags : [],
           icon,
-          reminderTime,
+          color,
         })
         .returning();
 
@@ -69,12 +90,12 @@ export function registerHabitRoutes(app: App) {
     }
   );
 
-  // GET /api/habits - Get all active habits for the authenticated user
+  // GET /api/habits - Get all user habits
   app.fastify.get(
     '/api/habits',
     {
       schema: {
-        description: 'Get all active habits for the user',
+        description: 'Get all user habits',
         tags: ['habits'],
       },
     },
@@ -83,7 +104,7 @@ export function registerHabitRoutes(app: App) {
       if (!session) return;
 
       const habits = await app.db.query.habits.findMany({
-        where: and(eq(schema.habits.userId, session.user.id), eq(schema.habits.isActive, true)),
+        where: eq(schema.habits.userId, session.user.id),
         orderBy: desc(schema.habits.createdAt),
       });
 
@@ -91,12 +112,12 @@ export function registerHabitRoutes(app: App) {
     }
   );
 
-  // GET /api/habits/:id - Get a specific habit with its check-in history
+  // GET /api/habits/:id - Get single habit with stats
   app.fastify.get(
     '/api/habits/:id',
     {
       schema: {
-        description: 'Get a specific habit with check-in history',
+        description: 'Get single habit with stats',
         tags: ['habits'],
         params: {
           type: 'object',
@@ -115,7 +136,7 @@ export function registerHabitRoutes(app: App) {
         where: and(eq(schema.habits.id, id), eq(schema.habits.userId, session.user.id)),
         with: {
           checkIns: {
-            orderBy: desc(schema.checkIns.date),
+            orderBy: desc(schema.checkIns.completedAt),
           },
         },
       });
@@ -128,7 +149,7 @@ export function registerHabitRoutes(app: App) {
     }
   );
 
-  // PUT /api/habits/:id - Update a habit
+  // PUT /api/habits/:id - Update habit
   app.fastify.put(
     '/api/habits/:id',
     {
@@ -168,12 +189,12 @@ export function registerHabitRoutes(app: App) {
     }
   );
 
-  // DELETE /api/habits/:id - Soft delete a habit
+  // DELETE /api/habits/:id - Delete habit
   app.fastify.delete(
     '/api/habits/:id',
     {
       schema: {
-        description: 'Soft delete a habit',
+        description: 'Delete a habit',
         tags: ['habits'],
         params: {
           type: 'object',
@@ -197,7 +218,7 @@ export function registerHabitRoutes(app: App) {
         return reply.code(404).send({ message: 'Habit not found' });
       }
 
-      await app.db.update(schema.habits).set({ isActive: false }).where(eq(schema.habits.id, id));
+      await app.db.delete(schema.habits).where(eq(schema.habits.id, id));
 
       return reply.code(204).send();
     }

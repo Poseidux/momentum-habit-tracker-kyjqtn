@@ -5,10 +5,7 @@ import {
   integer,
   boolean,
   uuid,
-  jsonb,
   pgEnum,
-  date,
-  time,
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
@@ -17,7 +14,6 @@ import { user } from './auth-schema.js';
 
 // Enums
 export const habitTypeEnum = pgEnum('habit_type', ['yes_no', 'count', 'duration']);
-export const scheduleTypeEnum = pgEnum('schedule_type', ['daily', 'specific_days', 'times_per_week']);
 
 // Habits table
 export const habits = pgTable(
@@ -29,18 +25,16 @@ export const habits = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     description: text('description'),
-    habitType: habitTypeEnum('habit_type').notNull().default('yes_no'),
-    targetValue: integer('target_value'),
-    scheduleType: scheduleTypeEnum('schedule_type').notNull().default('daily'),
-    scheduleConfig: jsonb('schedule_config').$type<{
-      daysOfWeek?: number[];
-      timesPerWeek?: number;
-    }>(),
+    type: habitTypeEnum('type').notNull().default('yes_no'),
+    schedule: text('schedule'), // daily, weekly, custom
+    frequency: integer('frequency'), // times per week/month
     tags: text('tags').array().default([]),
-    color: text('color').default('#3b82f6'),
+    customTags: text('custom_tags').array().default([]),
     icon: text('icon').default('circle'),
-    reminderTime: time('reminder_time'),
-    isActive: boolean('is_active').notNull().default(true),
+    color: text('color').default('#3b82f6'),
+    streak: integer('streak').notNull().default(0),
+    habitStrength: integer('habit_strength').notNull().default(100),
+    consistencyPercent: integer('consistency_percent').notNull().default(0),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -49,7 +43,6 @@ export const habits = pgTable(
   },
   (table) => [
     index('habits_user_id_idx').on(table.userId),
-    index('habits_is_active_idx').on(table.isActive),
   ]
 );
 
@@ -64,18 +57,17 @@ export const checkIns = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    date: date('date', { mode: 'string' }).notNull(),
-    value: integer('value').notNull(),
+    completedAt: timestamp('completed_at').notNull(),
+    value: integer('value'), // for count/duration types
     note: text('note'),
-    mood: integer('mood'),
-    effort: integer('effort'),
+    mood: integer('mood'), // 1-5
+    effort: integer('effort'), // 1-5
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
     index('check_ins_habit_id_idx').on(table.habitId),
     index('check_ins_user_id_idx').on(table.userId),
-    index('check_ins_date_idx').on(table.date),
-    uniqueIndex('check_ins_habit_date_unique').on(table.habitId, table.date),
+    index('check_ins_completed_at_idx').on(table.completedAt),
   ]
 );
 
@@ -88,11 +80,9 @@ export const userStats = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' })
       .unique(),
-    totalXp: integer('total_xp').notNull().default(0),
-    level: integer('level').notNull().default(1),
     currentStreak: integer('current_streak').notNull().default(0),
     longestStreak: integer('longest_streak').notNull().default(0),
-    graceSkipsUsedThisWeek: integer('grace_skips_used_this_week').notNull().default(0),
+    totalCheckIns: integer('total_check_ins').notNull().default(0),
     updatedAt: timestamp('updated_at')
       .defaultNow()
       .$onUpdate(() => new Date())

@@ -2,104 +2,117 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { eq, and, desc, gte, lte } from 'drizzle-orm';
 import type { App } from '../index.js';
 import * as schema from '../db/schema.js';
+import * as authSchema from '../db/auth-schema.js';
 
-const XP_PER_CHECK_IN = 10;
-const XP_PER_STREAK_MILESTONE = 5;
-const STREAK_MILESTONE = 7;
+const XP_BASE = 10;
+const STREAK_MILESTONES = [7, 14, 30, 60, 90];
+const STREAK_MILESTONE_XP = 50;
 
-function getDateString(date: Date | string): string {
-  if (typeof date === 'string') return date;
+function getDateString(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-function daysAgo(days: number): string {
+function getTodayStart(): Date {
   const d = new Date();
-  d.setDate(d.getDate() - days);
-  return getDateString(d);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
 }
 
-async function calculateStreak(
+function calculateDaysSinceLastCheckIn(checkIns: any[]): number {
+  if (checkIns.length === 0) return 0;
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  for (const checkIn of checkIns) {
+    const checkInDate = new Date(checkIn.completedAt);
+    checkInDate.setUTCHours(0, 0, 0, 0);
+
+    if (checkInDate.getTime() === today.getTime()) {
+      return 0; // Already checked in today
+    }
+  }
+
+  const lastCheckInDate = new Date(checkIns[0].completedAt);
+  lastCheckInDate.setUTCHours(0, 0, 0, 0);
+
+  const daysDiff = Math.floor((today.getTime() - lastCheckInDate.getTime()) / (1000 * 60 * 60 * 24));
+  return daysDiff;
+}
+
+async function calculateHabitStats(
   db: any,
-  habitId: string,
-  asOfDate: string
-): Promise<{ currentStreak: number; longestStreak: number }> {
+  habitId: string
+): Promise<{ streak: number; habitStrength: number; consistencyPercent: number }> {
   const checkIns = await db
     .select()
     .from(schema.checkIns)
     .where(eq(schema.checkIns.habitId, habitId))
-    .orderBy(desc(schema.checkIns.date));
+    .orderBy(desc(schema.checkIns.completedAt));
 
-  let currentStreak = 0;
-  let longestStreak = 0;
-  let lastProcessedDate: Date | null = null;
+  if (checkIns.length === 0) {
+    return { streak: 0, habitStrength: 100, consistencyPercent: 0 };
+  }
+
+  // Calculate streak
+  let streak = 0;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  let currentDate = new Date(today);
 
   for (const checkIn of checkIns) {
-    const checkInDate = new Date(checkIn.date);
+    const checkInDate = new Date(checkIn.completedAt);
     checkInDate.setUTCHours(0, 0, 0, 0);
 
-    if (lastProcessedDate === null) {
-      lastProcessedDate = new Date(asOfDate);
-      lastProcessedDate.setUTCHours(0, 0, 0, 0);
-    }
-
-    const expectedDate = new Date(lastProcessedDate);
-    expectedDate.setDate(expectedDate.getDate() - 1);
-
-    if (checkInDate.getTime() === lastProcessedDate.getTime()) {
-      currentStreak++;
-      longestStreak = Math.max(longestStreak, currentStreak);
-      lastProcessedDate = expectedDate;
-    } else if (checkInDate.getTime() < lastProcessedDate.getTime()) {
+    if (checkInDate.getTime() === currentDate.getTime()) {
+      streak++;
+      currentDate.setDate(currentDate.getDate() - 1);
+    } else if (checkInDate.getTime() < currentDate.getTime()) {
       break;
     }
   }
 
-  return { currentStreak, longestStreak };
-}
+  // Calculate consistency (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  thirtyDaysAgo.setUTCHours(0, 0, 0, 0);
 
-async function getOrCreateUserStats(db: any, userId: string) {
-  let stats = await db.query.userStats.findFirst({
-    where: eq(schema.userStats.userId, userId),
+  const recentCheckIns = checkIns.filter((c) => {
+    const date = new Date(c.completedAt);
+    date.setUTCHours(0, 0, 0, 0);
+    return date.getTime() >= thirtyDaysAgo.getTime();
   });
 
-  if (!stats) {
-    [stats] = await db
-      .insert(schema.userStats)
-      .values({
-        userId,
-        totalXp: 0,
-        level: 1,
-        currentStreak: 0,
-        longestStreak: 0,
-        graceSkipsUsedThisWeek: 0,
-      })
-      .returning();
-  }
+  const consistencyPercent = Math.min(100, Math.round((recentCheckIns.length / 30) * 100));
 
-  return stats;
-}
+  // Calculate habit strength: ratio of completed vs missed
+  const totalDays = 30;
+  const completedDays = recentCheckIns.length;
+  const missedDays = Math.max(0, totalDays - completedDays);
+  const habitStrength = completedDays > 0
+    ? Math.round((completedDays / (completedDays + missedDays)) * 100)
+    : 0;
 
-function calculateLevel(totalXp: number): number {
-  return Math.floor(Math.sqrt(totalXp / 100)) + 1;
+  return { streak, habitStrength, consistencyPercent };
 }
 
 export function registerCheckInRoutes(app: App) {
   const requireAuth = app.requireAuth();
 
-  // POST /api/check-ins - Record a check-in for a habit
+  // POST /api/check-ins - Create check-in
   app.fastify.post(
     '/api/check-ins',
     {
       schema: {
-        description: 'Record a check-in for a habit',
+        description: 'Create a check-in for a habit',
         tags: ['check-ins'],
         body: {
           type: 'object',
-          required: ['habitId', 'value'],
+          required: ['habitId'],
           properties: {
             habitId: { type: 'string' },
             value: { type: 'integer' },
-            date: { type: 'string' },
             note: { type: 'string' },
             mood: { type: 'integer' },
             effort: { type: 'integer' },
@@ -111,8 +124,7 @@ export function registerCheckInRoutes(app: App) {
       const session = await requireAuth(request, reply);
       if (!session) return;
 
-      const { habitId, value, date = getDateString(new Date()), note, mood, effort } =
-        request.body as any;
+      const { habitId, value, note, mood, effort } = request.body as any;
 
       // Verify habit ownership
       const habit = await app.db.query.habits.findFirst({
@@ -123,16 +135,7 @@ export function registerCheckInRoutes(app: App) {
         return reply.code(404).send({ message: 'Habit not found' });
       }
 
-      // Check if check-in already exists for this date
-      const existingCheckIn = await app.db.query.checkIns.findFirst({
-        where: and(eq(schema.checkIns.habitId, habitId), eq(schema.checkIns.date, date)),
-      });
-
-      if (existingCheckIn) {
-        return reply
-          .code(409)
-          .send({ message: 'Check-in already exists for this habit on this date' });
-      }
+      const completedAt = new Date();
 
       // Create check-in
       const [checkIn] = await app.db
@@ -140,7 +143,7 @@ export function registerCheckInRoutes(app: App) {
         .values({
           habitId,
           userId: session.user.id,
-          date,
+          completedAt,
           value,
           note,
           mood: mood ? Math.max(1, Math.min(5, mood)) : undefined,
@@ -148,49 +151,92 @@ export function registerCheckInRoutes(app: App) {
         })
         .returning();
 
-      // Calculate streak and award XP
-      const { currentStreak } = await calculateStreak(app.db, habitId, date);
+      // Calculate stats and update habit
+      const { streak, habitStrength, consistencyPercent } = await calculateHabitStats(
+        app.db,
+        habitId
+      );
 
-      // Get or create user stats
-      let stats = await getOrCreateUserStats(app.db, session.user.id);
+      await app.db
+        .update(schema.habits)
+        .set({
+          streak,
+          habitStrength,
+          consistencyPercent,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.habits.id, habitId));
 
       // Calculate XP
-      let xpAwarded = XP_PER_CHECK_IN;
-      if (currentStreak > 0 && currentStreak % STREAK_MILESTONE === 0) {
-        xpAwarded += XP_PER_STREAK_MILESTONE;
+      let xpAwarded = XP_BASE;
+      if (STREAK_MILESTONES.includes(streak)) {
+        xpAwarded += STREAK_MILESTONE_XP;
       }
 
-      const newTotalXp = stats.totalXp + xpAwarded;
-      const newLevel = calculateLevel(newTotalXp);
+      // Get or create user stats
+      let stats = await app.db.query.userStats.findFirst({
+        where: eq(schema.userStats.userId, session.user.id),
+      });
 
-      // Update user stats
-      [stats] = await app.db
-        .update(schema.userStats)
+      if (!stats) {
+        [stats] = await app.db
+          .insert(schema.userStats)
+          .values({
+            userId: session.user.id,
+            currentStreak: streak,
+            longestStreak: streak,
+            totalCheckIns: 1,
+          })
+          .returning();
+      } else {
+        const newTotalCheckIns = stats.totalCheckIns + 1;
+        const newLongestStreak = Math.max(stats.longestStreak, streak);
+
+        [stats] = await app.db
+          .update(schema.userStats)
+          .set({
+            currentStreak: streak,
+            longestStreak: newLongestStreak,
+            totalCheckIns: newTotalCheckIns,
+          })
+          .where(eq(schema.userStats.userId, session.user.id))
+          .returning();
+      }
+
+      // Update user XP and level
+      const newTotalXp = (await app.db.query.user.findFirst({
+        where: eq(authSchema.user.id, session.user.id),
+      }))?.totalXp || 0;
+
+      const updatedXp = newTotalXp + xpAwarded;
+      const newLevel = Math.floor(Math.sqrt(updatedXp / 100));
+
+      await app.db
+        .update(authSchema.user)
         .set({
-          totalXp: newTotalXp,
+          totalXp: updatedXp,
           level: newLevel,
         })
-        .where(eq(schema.userStats.userId, session.user.id))
-        .returning();
+        .where(eq(authSchema.user.id, session.user.id));
 
       return reply.code(201).send({
         checkIn,
         xpAwarded,
-        currentStreak,
+        currentStreak: streak,
         userStats: {
-          totalXp: stats.totalXp,
-          level: stats.level,
+          totalXp: updatedXp,
+          level: newLevel,
         },
       });
     }
   );
 
-  // GET /api/check-ins/today - Get all check-ins for today
+  // GET /api/check-ins/today - Get today's check-ins
   app.fastify.get(
     '/api/check-ins/today',
     {
       schema: {
-        description: "Get all check-ins for today for the user",
+        description: "Get today's check-ins",
         tags: ['check-ins'],
       },
     },
@@ -198,26 +244,32 @@ export function registerCheckInRoutes(app: App) {
       const session = await requireAuth(request, reply);
       if (!session) return;
 
-      const today = getDateString(new Date());
+      const today = getTodayStart();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
       const checkIns = await app.db
         .select()
         .from(schema.checkIns)
         .where(
-          and(eq(schema.checkIns.userId, session.user.id), eq(schema.checkIns.date, today))
+          and(
+            eq(schema.checkIns.userId, session.user.id),
+            gte(schema.checkIns.completedAt, today),
+            lte(schema.checkIns.completedAt, tomorrow)
+          )
         )
-        .orderBy(desc(schema.checkIns.createdAt));
+        .orderBy(desc(schema.checkIns.completedAt));
 
       return checkIns;
     }
   );
 
-  // GET /api/check-ins/habit/:habitId - Get check-in history with date range support
+  // GET /api/check-ins/habit/:habitId - Get check-ins for a habit
   app.fastify.get(
     '/api/check-ins/habit/:habitId',
     {
       schema: {
-        description: 'Get check-in history for a specific habit',
+        description: 'Get check-ins for a habit',
         tags: ['check-ins'],
         params: {
           type: 'object',
@@ -238,10 +290,7 @@ export function registerCheckInRoutes(app: App) {
       if (!session) return;
 
       const { habitId } = request.params as { habitId: string };
-      const { startDate, endDate } = request.query as {
-        startDate?: string;
-        endDate?: string;
-      };
+      const { startDate, endDate } = request.query as { startDate?: string; endDate?: string };
 
       // Verify habit ownership
       const habit = await app.db.query.habits.findFirst({
@@ -255,24 +304,26 @@ export function registerCheckInRoutes(app: App) {
       let whereClause = eq(schema.checkIns.habitId, habitId);
 
       if (startDate) {
-        whereClause = and(whereClause, gte(schema.checkIns.date, startDate));
+        whereClause = and(whereClause, gte(schema.checkIns.completedAt, new Date(startDate)));
       }
 
       if (endDate) {
-        whereClause = and(whereClause, lte(schema.checkIns.date, endDate));
+        const endDateTime = new Date(endDate);
+        endDateTime.setDate(endDateTime.getDate() + 1);
+        whereClause = and(whereClause, lte(schema.checkIns.completedAt, endDateTime));
       }
 
       const checkIns = await app.db
         .select()
         .from(schema.checkIns)
         .where(whereClause)
-        .orderBy(desc(schema.checkIns.date));
+        .orderBy(desc(schema.checkIns.completedAt));
 
       return checkIns;
     }
   );
 
-  // PUT /api/check-ins/:id - Update a check-in
+  // PUT /api/check-ins/:id - Update check-in
   app.fastify.put(
     '/api/check-ins/:id',
     {
@@ -305,7 +356,7 @@ export function registerCheckInRoutes(app: App) {
       const [updated] = await app.db
         .update(schema.checkIns)
         .set({
-          note,
+          note: note !== undefined ? note : existingCheckIn.note,
           mood: mood ? Math.max(1, Math.min(5, mood)) : existingCheckIn.mood,
           effort: effort ? Math.max(1, Math.min(5, effort)) : existingCheckIn.effort,
         })
