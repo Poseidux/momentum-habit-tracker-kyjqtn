@@ -8,11 +8,13 @@ import { colors } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAppTheme, THEMES } from '@/contexts/ThemeContext';
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const { currentTheme, setTheme } = useAppTheme();
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -41,6 +43,11 @@ export default function ProfileScreen() {
     router.push('/auth/sign-in');
   };
 
+  const handleThemeSelect = (themeId: string) => {
+    setTheme(themeId);
+    Alert.alert('Theme Changed', 'Your new theme has been applied!');
+  };
+
   const menuItems = [
     {
       icon: 'notifications',
@@ -53,9 +60,9 @@ export default function ProfileScreen() {
       onPress: () => Alert.alert('Coming Soon', 'Reminder settings will be available soon!'),
     },
     {
-      icon: 'palette',
-      label: 'Themes',
-      onPress: () => Alert.alert('Coming Soon', 'Theme customization will be available soon!'),
+      icon: 'group',
+      label: 'Habit Groups',
+      onPress: () => router.push('/habit-groups' as any),
     },
     {
       icon: 'download',
@@ -79,7 +86,7 @@ export default function ProfileScreen() {
       style={[
         styles.container, 
         { 
-          backgroundColor: theme.dark ? colors.backgroundDark : colors.background,
+          backgroundColor: theme.dark ? currentTheme.backgroundDark : currentTheme.background,
           paddingTop: Platform.OS === 'android' ? 20 : 0,
         }
       ]}
@@ -92,7 +99,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.dark ? colors.textDark : colors.text }]}>
+          <Text style={[styles.title, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
             Profile
           </Text>
         </View>
@@ -103,21 +110,21 @@ export default function ProfileScreen() {
             style={[
               styles.userCard,
               { 
-                backgroundColor: theme.dark ? colors.cardDark : colors.card,
-                borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
+                backgroundColor: theme.dark ? currentTheme.cardDark : currentTheme.card,
+                borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
               }
             ]}
           >
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <View style={[styles.avatar, { backgroundColor: currentTheme.primary }]}>
               <Text style={styles.avatarText}>
                 {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
               </Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={[styles.userName, { color: theme.dark ? colors.textDark : colors.text }]}>
+              <Text style={[styles.userName, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
                 {user?.name || 'User'}
               </Text>
-              <Text style={[styles.userEmail, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
+              <Text style={[styles.userEmail, { color: theme.dark ? currentTheme.textSecondaryDark : currentTheme.textSecondary }]}>
                 {user?.email || 'user@example.com'}
               </Text>
             </View>
@@ -129,7 +136,7 @@ export default function ProfileScreen() {
             activeOpacity={0.9}
           >
             <LinearGradient
-              colors={[colors.primary, colors.primaryDark]}
+              colors={[currentTheme.primary, currentTheme.primaryDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.signInGradient}
@@ -163,8 +170,8 @@ export default function ProfileScreen() {
             style={[
               styles.infoBanner,
               { 
-                backgroundColor: colors.success + '15',
-                borderColor: colors.success + '30',
+                backgroundColor: currentTheme.success + '15',
+                borderColor: currentTheme.success + '30',
               }
             ]}
           >
@@ -172,14 +179,14 @@ export default function ProfileScreen() {
               ios_icon_name="checkmark.circle"
               android_material_icon_name="check-circle"
               size={24}
-              color={colors.success}
+              color={currentTheme.success}
             />
             <View style={styles.infoText}>
-              <Text style={[styles.infoTitle, { color: colors.success }]}>
+              <Text style={[styles.infoTitle, { color: currentTheme.success }]}>
                 Free Features Active
               </Text>
-              <Text style={[styles.infoSubtitle, { color: colors.success }]}>
-                Track up to 5 habits with basic stats
+              <Text style={[styles.infoSubtitle, { color: currentTheme.success }]}>
+                Track up to 3 habits with basic stats
               </Text>
             </View>
           </View>
@@ -190,8 +197,8 @@ export default function ProfileScreen() {
           style={[
             styles.premiumBanner,
             { 
-              backgroundColor: colors.accent + '15',
-              borderColor: colors.accent + '30',
+              backgroundColor: currentTheme.accent + '15',
+              borderColor: currentTheme.accent + '30',
             }
           ]}
           onPress={() => Alert.alert('Premium', 'Premium features coming soon!')}
@@ -201,13 +208,13 @@ export default function ProfileScreen() {
             ios_icon_name="star.fill"
             android_material_icon_name="star"
             size={28}
-            color={colors.accent}
+            color={currentTheme.accent}
           />
           <View style={styles.premiumText}>
-            <Text style={[styles.premiumTitle, { color: colors.accent }]}>
+            <Text style={[styles.premiumTitle, { color: currentTheme.accent }]}>
               Upgrade to Premium
             </Text>
-            <Text style={[styles.premiumSubtitle, { color: colors.accent }]}>
+            <Text style={[styles.premiumSubtitle, { color: currentTheme.accent }]}>
               Unlimited habits, advanced insights & more
             </Text>
           </View>
@@ -215,9 +222,54 @@ export default function ProfileScreen() {
             ios_icon_name="chevron.right"
             android_material_icon_name="arrow-forward"
             size={20}
-            color={colors.accent}
+            color={currentTheme.accent}
           />
         </TouchableOpacity>
+
+        {/* Theme Section */}
+        <View style={styles.themeSection}>
+          <Text style={[styles.sectionTitle, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
+            Themes
+          </Text>
+          <View style={styles.themesGrid}>
+            {THEMES.map((themeOption, index) => (
+              <React.Fragment key={index}>
+                <TouchableOpacity
+                  style={[
+                    styles.themeCard,
+                    { 
+                      backgroundColor: theme.dark ? currentTheme.cardDark : currentTheme.card,
+                      borderColor: currentTheme.id === themeOption.id ? currentTheme.primary : 'transparent',
+                      borderWidth: 2,
+                    }
+                  ]}
+                  onPress={() => handleThemeSelect(themeOption.id)}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={[themeOption.primary, themeOption.secondary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.themePreview}
+                  />
+                  <Text style={[styles.themeName, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
+                    {themeOption.name}
+                  </Text>
+                  {currentTheme.id === themeOption.id && (
+                    <View style={[styles.activeIndicator, { backgroundColor: currentTheme.primary }]}>
+                      <IconSymbol
+                        ios_icon_name="checkmark"
+                        android_material_icon_name="check"
+                        size={16}
+                        color="#FFFFFF"
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
@@ -227,23 +279,23 @@ export default function ProfileScreen() {
                 style={[
                   styles.menuItem,
                   { 
-                    backgroundColor: theme.dark ? colors.cardDark : colors.card,
-                    borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
+                    backgroundColor: theme.dark ? currentTheme.cardDark : currentTheme.card,
+                    borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                   }
                 ]}
                 onPress={item.onPress}
                 activeOpacity={0.7}
               >
                 <View style={styles.menuItemLeft}>
-                  <View style={[styles.menuIcon, { backgroundColor: colors.primary + '15' }]}>
+                  <View style={[styles.menuIcon, { backgroundColor: currentTheme.primary + '15' }]}>
                     <IconSymbol
                       ios_icon_name={item.icon}
                       android_material_icon_name={item.icon}
                       size={20}
-                      color={colors.primary}
+                      color={currentTheme.primary}
                     />
                   </View>
-                  <Text style={[styles.menuLabel, { color: theme.dark ? colors.textDark : colors.text }]}>
+                  <Text style={[styles.menuLabel, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
                     {item.label}
                   </Text>
                 </View>
@@ -251,7 +303,7 @@ export default function ProfileScreen() {
                   ios_icon_name="chevron.right"
                   android_material_icon_name="arrow-forward"
                   size={20}
-                  color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
+                  color={theme.dark ? currentTheme.textSecondaryDark : currentTheme.textSecondary}
                 />
               </TouchableOpacity>
             </React.Fragment>
@@ -307,7 +359,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 2,
   },
   avatar: {
@@ -339,7 +394,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 16,
     overflow: 'hidden',
-    boxShadow: '0px 4px 16px rgba(99, 102, 241, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
     elevation: 4,
   },
   signInGradient: {
@@ -416,6 +474,49 @@ const styles = StyleSheet.create({
   premiumSubtitle: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  themeSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  themesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  themeCard: {
+    width: '48%',
+    borderRadius: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  themePreview: {
+    height: 80,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  themeName: {
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuSection: {
     marginBottom: 24,

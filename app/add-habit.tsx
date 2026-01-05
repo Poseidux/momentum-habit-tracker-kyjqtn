@@ -15,12 +15,19 @@ export default function AddHabitScreen() {
   const [description, setDescription] = useState('');
   const [selectedType, setSelectedType] = useState<HabitType>('yes_no');
   const [selectedSchedule, setSelectedSchedule] = useState<HabitSchedule>('daily');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [timesPerWeek, setTimesPerWeek] = useState(3);
   const [selectedColor, setSelectedColor] = useState(HABIT_COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState(HABIT_ICONS[0]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [customIconUri, setCustomIconUri] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Type customization
+  const [showTypeCustomization, setShowTypeCustomization] = useState(false);
+  const [countTarget, setCountTarget] = useState('10');
+  const [durationTarget, setDurationTarget] = useState('30');
 
   const { addHabit, habits } = useHabits();
   const { user } = useAuth();
@@ -29,6 +36,8 @@ export default function AddHabitScreen() {
 
   const isPremium = user?.isPremium || false;
   const canCreateMoreHabits = isPremium || habits.length < 3;
+
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   useEffect(() => {
     setHasUnsavedChanges(
@@ -55,12 +64,13 @@ export default function AddHabitScreen() {
     }
 
     try {
-      // TODO: Backend Integration - Create habit via API endpoint
       await addHabit({
         title: title.trim(),
         description: description.trim(),
         type: selectedType,
         schedule: selectedSchedule,
+        specificDays: selectedSchedule === 'specific_days' ? selectedDays : undefined,
+        timesPerWeek: selectedSchedule === 'x_per_week' ? timesPerWeek : undefined,
         color: selectedColor,
         icon: selectedIcon,
         customIconUrl: customIconUri || undefined,
@@ -100,6 +110,14 @@ export default function AddHabitScreen() {
       setSelectedTags(selectedTags.filter(t => t !== tag));
     } else {
       setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const toggleDay = (dayIndex: number) => {
+    if (selectedDays.includes(dayIndex)) {
+      setSelectedDays(selectedDays.filter(d => d !== dayIndex));
+    } else {
+      setSelectedDays([...selectedDays, dayIndex]);
     }
   };
 
@@ -163,21 +181,29 @@ export default function AddHabitScreen() {
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: 'New Habit',
+          headerBackTitle: 'Back',
           headerLeft: () => (
-            <TouchableOpacity onPress={handleCancel}>
-              <Text style={{ color: theme.colors.primary, fontSize: 17 }}>Cancel</Text>
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={handleSave}>
-              <Text style={{ color: theme.colors.primary, fontSize: 17, fontWeight: '600' }}>Save</Text>
+            <TouchableOpacity onPress={handleCancel} style={{ paddingHorizontal: 16 }}>
+              <IconSymbol 
+                ios_icon_name="chevron.left" 
+                android_material_icon_name="arrow-back" 
+                size={24} 
+                color={theme.colors.primary} 
+              />
             </TouchableOpacity>
           ),
         }}
       />
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <SafeAreaView 
+        style={[styles.container, { backgroundColor: theme.colors.background }]} 
+        edges={['bottom']}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+        >
           {/* Title Input */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: theme.colors.text }]}>Title *</Text>
@@ -205,9 +231,19 @@ export default function AddHabitScreen() {
             />
           </View>
 
-          {/* Habit Type */}
+          {/* Habit Type - Editable */}
           <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Type</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.label, { color: theme.colors.text }]}>Type</Text>
+              <TouchableOpacity onPress={() => setShowTypeCustomization(!showTypeCustomization)}>
+                <IconSymbol 
+                  ios_icon_name={showTypeCustomization ? "chevron.up" : "chevron.down"} 
+                  android_material_icon_name={showTypeCustomization ? "expand-less" : "expand-more"} 
+                  size={20} 
+                  color={theme.colors.primary} 
+                />
+              </TouchableOpacity>
+            </View>
             <View style={styles.optionsRow}>
               {(['yes_no', 'count', 'duration'] as HabitType[]).map((type, index) => (
                 <TouchableOpacity
@@ -231,9 +267,46 @@ export default function AddHabitScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            
+            {/* Type Customization */}
+            {showTypeCustomization && (
+              <View style={[styles.customizationBox, { backgroundColor: theme.colors.card }]}>
+                {selectedType === 'count' && (
+                  <View>
+                    <Text style={[styles.customLabel, { color: theme.colors.text }]}>Target Count</Text>
+                    <TextInput
+                      style={[styles.customInput, { backgroundColor: theme.colors.background, color: theme.colors.text }]}
+                      placeholder="e.g., 10"
+                      placeholderTextColor={theme.colors.text + '60'}
+                      value={countTarget}
+                      onChangeText={setCountTarget}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                )}
+                {selectedType === 'duration' && (
+                  <View>
+                    <Text style={[styles.customLabel, { color: theme.colors.text }]}>Target Duration (minutes)</Text>
+                    <TextInput
+                      style={[styles.customInput, { backgroundColor: theme.colors.background, color: theme.colors.text }]}
+                      placeholder="e.g., 30"
+                      placeholderTextColor={theme.colors.text + '60'}
+                      value={durationTarget}
+                      onChangeText={setDurationTarget}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                )}
+                {selectedType === 'yes_no' && (
+                  <Text style={[styles.customLabel, { color: theme.colors.text }]}>
+                    Simple yes/no tracking - just check it off when done!
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
 
-          {/* Schedule */}
+          {/* Schedule - Editable */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: theme.colors.text }]}>Schedule</Text>
             <View style={styles.optionsRow}>
@@ -259,6 +332,65 @@ export default function AddHabitScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Schedule Customization */}
+            {selectedSchedule === 'specific_days' && (
+              <View style={[styles.customizationBox, { backgroundColor: theme.colors.card }]}>
+                <Text style={[styles.customLabel, { color: theme.colors.text }]}>Select Days</Text>
+                <View style={styles.daysRow}>
+                  {weekDays.map((day, index) => (
+                    <TouchableOpacity
+                      key={`day-${index}`}
+                      style={[
+                        styles.dayButton,
+                        { backgroundColor: theme.colors.background },
+                        selectedDays.includes(index) && { backgroundColor: theme.colors.primary },
+                      ]}
+                      onPress={() => toggleDay(index)}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          { color: theme.colors.text },
+                          selectedDays.includes(index) && { color: '#FFFFFF' },
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {selectedSchedule === 'x_per_week' && (
+              <View style={[styles.customizationBox, { backgroundColor: theme.colors.card }]}>
+                <Text style={[styles.customLabel, { color: theme.colors.text }]}>Times per Week: {timesPerWeek}</Text>
+                <View style={styles.frequencyRow}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((num, index) => (
+                    <TouchableOpacity
+                      key={`freq-${index}`}
+                      style={[
+                        styles.frequencyButton,
+                        { backgroundColor: theme.colors.background },
+                        timesPerWeek === num && { backgroundColor: theme.colors.primary },
+                      ]}
+                      onPress={() => setTimesPerWeek(num)}
+                    >
+                      <Text
+                        style={[
+                          styles.frequencyText,
+                          { color: theme.colors.text },
+                          timesPerWeek === num && { color: '#FFFFFF' },
+                        ]}
+                      >
+                        {num}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Color Selection */}
@@ -396,7 +528,21 @@ export default function AddHabitScreen() {
               </Text>
             </View>
           )}
+
+          {/* Bottom spacing */}
+          <View style={{ height: 20 }} />
         </ScrollView>
+
+        {/* Create Habit Button - Fixed at bottom */}
+        <View style={[styles.bottomButtonContainer, { backgroundColor: theme.colors.background }]}>
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+            onPress={handleSave}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.createButtonText}>Create Habit</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </>
   );
@@ -408,10 +554,16 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   label: {
     fontSize: 17,
@@ -440,6 +592,51 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  customizationBox: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+  },
+  customLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  customInput: {
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+  },
+  daysRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  dayButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  dayText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  frequencyRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  frequencyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  frequencyText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   colorGrid: {
     flexDirection: 'row',
@@ -505,5 +702,30 @@ const styles = StyleSheet.create({
   warningText: {
     fontSize: 14,
     color: '#856404',
+  },
+  bottomButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  createButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  createButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

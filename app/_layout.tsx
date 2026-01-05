@@ -17,8 +17,18 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { WidgetProvider } from "@/contexts/WidgetContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider as AppThemeProvider } from "@/contexts/ThemeContext";
+import { BACKEND_URL, isBackendConfigured } from "@/utils/api";
 
 SplashScreen.preventAutoHideAsync();
+
+// Log backend configuration at app startup
+console.log('='.repeat(60));
+console.log('🚀 Momentum Habit Tracker - Backend Configuration');
+console.log('='.repeat(60));
+console.log('Backend URL:', BACKEND_URL || 'NOT CONFIGURED');
+console.log('Backend Status:', isBackendConfigured() ? '✅ Configured' : '❌ Not Configured');
+console.log('='.repeat(60));
 
 export const unstable_settings = {
   initialRouteName: "index",
@@ -84,45 +94,48 @@ export default function RootLayout() {
       <ThemeProvider
         value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
       >
-        <AuthProvider>
-          <WidgetProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="auth/sign-in" />
-                <Stack.Screen name="auth/sign-up" />
-                <Stack.Screen name="add-habit" />
-                <Stack.Screen name="habit/[id]" />
-                <Stack.Screen
-                  name="modal"
-                  options={{
-                    presentation: "modal",
-                    title: "Standard Modal",
-                  }}
-                />
-                <Stack.Screen
-                  name="formsheet"
-                  options={{
-                    presentation: "formSheet",
-                    title: "Form Sheet Modal",
-                    sheetGrabberVisible: true,
-                    sheetAllowedDetents: [0.5, 0.8, 1.0],
-                    sheetCornerRadius: 20,
-                  }}
-                />
-                <Stack.Screen
-                  name="transparent-modal"
-                  options={{
-                    presentation: "transparentModal",
-                    headerShown: false,
-                  }}
-                />
-              </Stack>
-              <SystemBars style="auto" />
-            </GestureHandlerRootView>
-          </WidgetProvider>
-        </AuthProvider>
+        <AppThemeProvider>
+          <AuthProvider>
+            <WidgetProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="auth/sign-in" />
+                  <Stack.Screen name="auth/sign-up" />
+                  <Stack.Screen name="add-habit" />
+                  <Stack.Screen name="habit/[id]" />
+                  <Stack.Screen name="habit-groups" />
+                  <Stack.Screen
+                    name="modal"
+                    options={{
+                      presentation: "modal",
+                      title: "Standard Modal",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="formsheet"
+                    options={{
+                      presentation: "formSheet",
+                      title: "Form Sheet Modal",
+                      sheetGrabberVisible: true,
+                      sheetAllowedDetents: [0.5, 0.8, 1.0],
+                      sheetCornerRadius: 20,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="transparent-modal"
+                    options={{
+                      presentation: "transparentModal",
+                      headerShown: false,
+                    }}
+                  />
+                </Stack>
+                <SystemBars style="auto" />
+              </GestureHandlerRootView>
+            </WidgetProvider>
+          </AuthProvider>
+        </AppThemeProvider>
       </ThemeProvider>
     </>
   );

@@ -1,11 +1,12 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
-import { useHabits, useUserStats, useHabitCheckIns } from '@/hooks/useHabits';
+import { useHabits, useUserStats, useTodayCheckIns } from '@/hooks/useHabits';
+import { authenticatedGet, isBackendConfigured } from '@/utils/api';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
@@ -15,11 +16,63 @@ export default function ProgressScreen() {
   const theme = useTheme();
   const { stats } = useUserStats();
   const { habits } = useHabits();
+  const [allCheckIns, setAllCheckIns] = useState<any[]>([]);
+
+  // Fetch all check-ins for calendar heatmap
+  useEffect(() => {
+    const fetchAllCheckIns = async () => {
+      try {
+        if (!isBackendConfigured()) {
+          console.log('[Progress] Backend not configured - using empty check-ins');
+          setAllCheckIns([]);
+          return;
+        }
+
+        console.log('[Progress] Fetching all check-ins for calendar...');
+        
+        // Calculate date range (last 30 days)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+
+        // Fetch check-ins for all habits
+        const checkInsPromises = habits.map(habit => 
+          authenticatedGet<any>(`/api/check-ins/habit/${habit.id}?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
+            .catch(err => {
+              console.log(`[Progress] Error fetching check-ins for habit ${habit.id}:`, err.message);
+              return [];
+            })
+        );
+
+        const results = await Promise.all(checkInsPromises);
+        const allCheckInsData = results.flat();
+        
+        console.log('[Progress] Fetched', allCheckInsData.length, 'check-ins');
+        setAllCheckIns(allCheckInsData);
+      } catch (error: any) {
+        console.log('[Progress] Error fetching check-ins:', error.message);
+        setAllCheckIns([]);
+      }
+    };
+
+    if (habits.length > 0) {
+      fetchAllCheckIns();
+    }
+  }, [habits]);
 
   // Calculate insights
   const insights = useMemo(() => {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const mostConsistentDay = dayNames[2]; // Mock: Tuesday
+    
+    // Calculate most consistent day from check-ins
+    const dayCount = new Array(7).fill(0);
+    allCheckIns.forEach(checkIn => {
+      const date = new Date(checkIn.date);
+      dayCount[date.getDay()]++;
+    });
+    const maxDayIndex = dayCount.indexOf(Math.max(...dayCount));
+    const mostConsistentDay = dayCount[maxDayIndex] > 0 ? dayNames[maxDayIndex] : undefined;
+    
     const weeklyTrend: 'improving' | 'stable' | 'declining' = 'improving';
     const onTrackPercentage = stats.consistency || 75;
 
@@ -27,32 +80,45 @@ export default function ProgressScreen() {
       mostConsistentDay,
       weeklyTrend,
       onTrackPercentage,
-      weeklyReview: `You're most consistent on ${mostConsistentDay}. Keep up the great work!`,
+      weeklyReview: mostConsistentDay 
+        ? `You're most consistent on ${mostConsistentDay}. Keep up the great work!`
+        : 'Start tracking to see your patterns!',
     };
-  }, [stats]);
+  }, [stats, allCheckIns]);
 
   // Generate calendar heatmap data (last 30 days)
   const heatmapData = useMemo(() => {
     const data = [];
     const today = new Date();
     
+    // Create a map of date -> check-in count
+    const checkInsByDate = new Map<string, number>();
+    allCheckIns.forEach(checkIn => {
+      const dateKey = checkIn.date.split('T')[0];
+      checkInsByDate.set(dateKey, (checkInsByDate.get(dateKey) || 0) + 1);
+    });
+    
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
       
-      // Mock intensity (0-4) - TODO: Backend Integration - Fetch actual check-in data
-      const intensity = Math.floor(Math.random() * 5);
+      // Calculate intensity based on number of check-ins (0-4 scale)
+      const checkInCount = checkInsByDate.get(dateKey) || 0;
+      const maxCheckIns = habits.length || 1;
+      const intensity = Math.min(4, Math.floor((checkInCount / maxCheckIns) * 5));
       
       data.push({
-        date: date.toISOString().split('T')[0],
+        date: dateKey,
         intensity,
         day: date.getDate(),
         dayOfWeek: date.getDay(),
+        checkInCount,
       });
     }
     
     return data;
-  }, []);
+  }, [allCheckIns, habits]);
 
   const getHeatmapColor = (intensity: number) => {
     if (intensity === 0) return theme.dark ? '#2D2D2D' : '#EEEEEE';

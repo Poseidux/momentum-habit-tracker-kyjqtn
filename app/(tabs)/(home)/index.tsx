@@ -27,7 +27,6 @@ export default function TodayScreen() {
   const handleCheckIn = async (habitId: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // TODO: Backend Integration - Record check-in via API endpoint
       await checkInHabit(habitId, 1);
       Alert.alert('✨ Great job!', 'Keep up the momentum!');
     } catch (error) {
