@@ -46,6 +46,8 @@ export interface UserStats {
   activeHabits: number;
   totalCheckIns: number;
   currentWeekStreak: number;
+  currentStreak?: number; // Overall current streak
+  consistency?: number; // Overall consistency percentage
   isPremium?: boolean; // Premium status
 }
 

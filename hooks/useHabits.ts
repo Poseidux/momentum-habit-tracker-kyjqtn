@@ -43,10 +43,10 @@ export function useHabits() {
         id: h.id,
         title: h.title,
         description: h.description || '',
-        type: h.habitType || h.type || 'yes_no',
-        schedule: h.scheduleType || h.schedule || 'daily',
-        specificDays: h.scheduleConfig?.specificDays,
-        timesPerWeek: h.scheduleConfig?.timesPerWeek,
+        type: h.type || 'yes_no', // API returns 'type'
+        schedule: h.schedule || 'daily', // API returns 'schedule'
+        specificDays: h.specificDays,
+        timesPerWeek: h.frequency, // API returns 'frequency'
         tags: h.tags || [],
         customTags: h.customTags || [],
         color: h.color || '#6366F1',
@@ -56,8 +56,8 @@ export function useHabits() {
         currentStreak: h.currentStreak || 0,
         longestStreak: h.longestStreak || 0,
         totalCompletions: h.totalCompletions || 0,
-        consistencyPercent: h.consistencyPercent || 0,
-        habitStrength: h.habitStrength || 0,
+        consistencyPercent: h.consistencyPercent || h.consistency || 0,
+        habitStrength: h.habitStrength || h.strength || 0,
       }));
       
       setHabits(transformedHabits);
@@ -83,22 +83,17 @@ export function useHabits() {
       
       console.log('[useHabits] Creating new habit:', habit);
       
-      // Transform to API format
+      // Transform to API format - API expects 'type' not 'habitType'
       const apiPayload = {
         title: habit.title,
         description: habit.description,
-        habitType: habit.type,
-        targetValue: habit.type === 'yes_no' ? 1 : undefined,
-        scheduleType: habit.schedule,
-        scheduleConfig: {
-          specificDays: habit.specificDays,
-          timesPerWeek: habit.timesPerWeek,
-        },
+        type: habit.type, // API expects 'type' field
+        schedule: habit.schedule, // API expects 'schedule' field
+        frequency: habit.timesPerWeek, // For x_per_week schedule
         tags: habit.tags,
         customTags: habit.customTags,
         color: habit.color,
         icon: habit.icon,
-        reminderTime: habit.reminderTime,
       };
       
       const response = await authenticatedPost<any>('/api/habits', apiPayload);
@@ -120,23 +115,17 @@ export function useHabits() {
       
       console.log('[useHabits] Updating habit:', id, updates);
       
-      // Transform to API format
+      // Transform to API format - API expects 'type' and 'schedule' not 'habitType' and 'scheduleType'
       const apiPayload: any = {};
       if (updates.title) apiPayload.title = updates.title;
       if (updates.description !== undefined) apiPayload.description = updates.description;
-      if (updates.type) apiPayload.habitType = updates.type;
-      if (updates.schedule) apiPayload.scheduleType = updates.schedule;
-      if (updates.specificDays || updates.timesPerWeek) {
-        apiPayload.scheduleConfig = {
-          specificDays: updates.specificDays,
-          timesPerWeek: updates.timesPerWeek,
-        };
-      }
+      if (updates.type) apiPayload.type = updates.type; // API expects 'type'
+      if (updates.schedule) apiPayload.schedule = updates.schedule; // API expects 'schedule'
+      if (updates.timesPerWeek) apiPayload.frequency = updates.timesPerWeek; // API expects 'frequency'
       if (updates.tags) apiPayload.tags = updates.tags;
       if (updates.customTags !== undefined) apiPayload.customTags = updates.customTags;
       if (updates.color) apiPayload.color = updates.color;
       if (updates.icon) apiPayload.icon = updates.icon;
-      if (updates.reminderTime !== undefined) apiPayload.reminderTime = updates.reminderTime;
       
       const response = await authenticatedPut<any>(`/api/habits/${id}`, apiPayload);
       console.log('[useHabits] Habit updated:', response);
@@ -251,7 +240,7 @@ export function useUserStats() {
         setTimeout(() => reject(new Error('Request timeout')), 5000)
       );
       
-      const fetchPromise = authenticatedGet<any>('/api/stats/overview');
+      const fetchPromise = authenticatedGet<any>('/api/stats');
       
       const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
       console.log('[useUserStats] Stats response:', response);
@@ -264,8 +253,10 @@ export function useUserStats() {
         totalHabits: response.totalHabits || 0,
         activeHabits: response.activeHabits || 0,
         totalCheckIns: response.totalCheckIns || 0,
-        currentWeekStreak: response.currentWeekStreak || 0,
+        currentWeekStreak: response.currentWeekStreak || response.currentStreak || 0,
         isPremium: response.isPremium || false,
+        currentStreak: response.currentStreak || 0,
+        consistency: response.consistency || 0,
       };
       
       setStats(statsData);
