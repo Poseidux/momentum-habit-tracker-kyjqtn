@@ -1,12 +1,13 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -25,7 +26,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await signOut();
-              router.replace('/auth');
+              Alert.alert('Success', 'You have been signed out. You can continue using the app with freemium features.');
             } catch (error) {
               console.error('Sign out error:', error);
               Alert.alert('Error', 'Failed to sign out. Please try again.');
@@ -36,42 +37,52 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleSignIn = () => {
+    router.push('/auth/sign-in');
+  };
+
   const menuItems = [
     {
       icon: 'notifications',
       label: 'Notifications',
-      onPress: () => console.log('Notifications'),
+      onPress: () => Alert.alert('Coming Soon', 'Notifications settings will be available soon!'),
     },
     {
       icon: 'calendar-today',
       label: 'Reminders',
-      onPress: () => console.log('Reminders'),
+      onPress: () => Alert.alert('Coming Soon', 'Reminder settings will be available soon!'),
     },
     {
       icon: 'palette',
       label: 'Themes',
-      onPress: () => console.log('Themes'),
+      onPress: () => Alert.alert('Coming Soon', 'Theme customization will be available soon!'),
     },
     {
       icon: 'download',
       label: 'Export Data',
-      onPress: () => console.log('Export Data'),
+      onPress: () => Alert.alert('Coming Soon', 'Data export will be available soon!'),
     },
     {
       icon: 'lock',
       label: 'Privacy',
-      onPress: () => console.log('Privacy'),
+      onPress: () => Alert.alert('Coming Soon', 'Privacy settings will be available soon!'),
     },
     {
       icon: 'help',
       label: 'Help & Support',
-      onPress: () => console.log('Help'),
+      onPress: () => Alert.alert('Help & Support', 'Need help? Contact us at support@momentum.app'),
     },
   ];
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: theme.dark ? colors.backgroundDark : colors.background }]}
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: theme.dark ? colors.backgroundDark : colors.background,
+          paddingTop: Platform.OS === 'android' ? 20 : 0,
+        }
+      ]}
       edges={['top']}
     >
       <ScrollView
@@ -86,33 +97,96 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        {/* User Info Card */}
-        <View
-          style={[
-            styles.userCard,
-            { 
-              backgroundColor: theme.dark ? colors.cardDark : colors.card,
-              borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-            }
-          ]}
-        >
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-            </Text>
+        {/* User Info Card or Sign In Prompt */}
+        {user ? (
+          <View
+            style={[
+              styles.userCard,
+              { 
+                backgroundColor: theme.dark ? colors.cardDark : colors.card,
+                borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
+              }
+            ]}
+          >
+            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarText}>
+                {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={[styles.userName, { color: theme.dark ? colors.textDark : colors.text }]}>
+                {user?.name || 'User'}
+              </Text>
+              <Text style={[styles.userEmail, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
+                {user?.email || 'user@example.com'}
+              </Text>
+            </View>
           </View>
-          <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: theme.dark ? colors.textDark : colors.text }]}>
-              {user?.name || 'User'}
-            </Text>
-            <Text style={[styles.userEmail, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-              {user?.email || 'user@example.com'}
-            </Text>
+        ) : (
+          <TouchableOpacity
+            style={styles.signInPrompt}
+            onPress={handleSignIn}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={[colors.primary, colors.primaryDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.signInGradient}
+            >
+              <IconSymbol
+                ios_icon_name="person.circle"
+                android_material_icon_name="account-circle"
+                size={48}
+                color="#FFFFFF"
+              />
+              <Text style={styles.signInTitle}>Sign In for Full Access</Text>
+              <Text style={styles.signInSubtitle}>
+                Sync your habits across devices and unlock premium features
+              </Text>
+              <View style={styles.signInButton}>
+                <Text style={styles.signInButtonText}>Sign In</Text>
+                <IconSymbol
+                  ios_icon_name="arrow.right"
+                  android_material_icon_name="arrow-forward"
+                  size={20}
+                  color="#FFFFFF"
+                />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {/* Freemium Info Banner */}
+        {!user && (
+          <View
+            style={[
+              styles.infoBanner,
+              { 
+                backgroundColor: colors.success + '15',
+                borderColor: colors.success + '30',
+              }
+            ]}
+          >
+            <IconSymbol
+              ios_icon_name="checkmark.circle"
+              android_material_icon_name="check-circle"
+              size={24}
+              color={colors.success}
+            />
+            <View style={styles.infoText}>
+              <Text style={[styles.infoTitle, { color: colors.success }]}>
+                Free Features Active
+              </Text>
+              <Text style={[styles.infoSubtitle, { color: colors.success }]}>
+                Track up to 5 habits with basic stats
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Premium Banner */}
-        <View
+        <TouchableOpacity
           style={[
             styles.premiumBanner,
             { 
@@ -120,9 +194,11 @@ export default function ProfileScreen() {
               borderColor: colors.accent + '30',
             }
           ]}
+          onPress={() => Alert.alert('Premium', 'Premium features coming soon!')}
+          activeOpacity={0.8}
         >
           <IconSymbol
-            ios_icon_name="star"
+            ios_icon_name="star.fill"
             android_material_icon_name="star"
             size={28}
             color={colors.accent}
@@ -136,19 +212,18 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <IconSymbol
-            ios_icon_name="arrow-forward"
+            ios_icon_name="chevron.right"
             android_material_icon_name="arrow-forward"
             size={20}
             color={colors.accent}
           />
-        </View>
+        </TouchableOpacity>
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
           {menuItems.map((item, index) => (
             <React.Fragment key={index}>
               <TouchableOpacity
-                key={index}
                 style={[
                   styles.menuItem,
                   { 
@@ -173,7 +248,7 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
                 <IconSymbol
-                  ios_icon_name="arrow-forward"
+                  ios_icon_name="chevron.right"
                   android_material_icon_name="arrow-forward"
                   size={20}
                   color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
@@ -183,20 +258,22 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Sign Out Button */}
-        <TouchableOpacity
-          style={[styles.signOutButton, { backgroundColor: colors.danger }]}
-          onPress={handleSignOut}
-          activeOpacity={0.8}
-        >
-          <IconSymbol
-            ios_icon_name="logout"
-            android_material_icon_name="logout"
-            size={20}
-            color="#FFFFFF"
-          />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        {/* Sign Out Button - Only show if user is signed in */}
+        {user && (
+          <TouchableOpacity
+            style={[styles.signOutButton, { backgroundColor: colors.danger }]}
+            onPress={handleSignOut}
+            activeOpacity={0.8}
+          >
+            <IconSymbol
+              ios_icon_name="arrow.right.square"
+              android_material_icon_name="logout"
+              size={20}
+              color="#FFFFFF"
+            />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Bottom padding for floating tab bar */}
         <View style={{ height: 100 }} />
@@ -256,6 +333,67 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 14,
+    fontWeight: '500',
+  },
+  signInPrompt: {
+    borderRadius: 20,
+    marginBottom: 16,
+    overflow: 'hidden',
+    boxShadow: '0px 4px 16px rgba(99, 102, 241, 0.3)',
+    elevation: 4,
+  },
+  signInGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  signInTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  signInSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  signInButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  signInButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  infoText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  infoSubtitle: {
+    fontSize: 13,
     fontWeight: '500',
   },
   premiumBanner: {

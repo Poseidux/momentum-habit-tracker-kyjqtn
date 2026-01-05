@@ -12,9 +12,9 @@ export const colors = {
   danger: '#EF4444',       // Red - delete actions
   
   // Backgrounds
-  background: '#FFFFFF',
+  background: '#F8FAFC',
   backgroundDark: '#0F172A',
-  backgroundAlt: '#F8FAFC',
+  backgroundAlt: '#FFFFFF',
   backgroundAltDark: '#1E293B',
   
   // Cards
@@ -34,6 +34,7 @@ export const colors = {
   borderDark: '#334155',
   divider: '#F1F5F9',
   dividerDark: '#334155',
+  surface: '#F1F5F9',
   
   // Habit strength colors
   strengthWeak: '#EF4444',

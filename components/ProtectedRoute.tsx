@@ -1,53 +1,25 @@
+
 /**
- * Protected Route Component Template
- *
- * A wrapper component that ensures a user is authenticated before
- * allowing access to a screen. Redirects to login if not authenticated.
- *
- * Usage:
- * ```tsx
- * <ProtectedRoute>
- *   <ProfileScreen />
- * </ProtectedRoute>
- * ```
- *
- * Or wrap route in _layout.tsx:
- * ```tsx
- * <Stack.Screen name="profile" options={{ title: "Profile" }}>
- *   {() => (
- *     <ProtectedRoute>
- *       <ProfileScreen />
- *     </ProtectedRoute>
- *   )}
- * </Stack.Screen>
- * ```
+ * Protected Route Component - Now Optional for Freemium
+ * Only redirects if explicitly required (for premium features)
  */
 
-import React, { useEffect } from "react";
+import React from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { useRouter } from "expo-router";
-import { useAuth } from "@/contexts/AuthContext"; // TODO: Update import path
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  redirectTo?: string; // Default is "/auth"
   loadingComponent?: React.ReactNode;
+  optional?: boolean; // If true, allows access without auth
 }
 
 export function ProtectedRoute({
   children,
-  redirectTo = "/auth",
   loadingComponent,
+  optional = true, // Default to optional for freemium
 }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      // User is not authenticated, redirect to login
-      router.replace(redirectTo as any);
-    }
-  }, [user, loading, router, redirectTo]);
 
   // Show loading state while checking authentication
   if (loading) {
@@ -58,12 +30,16 @@ export function ProtectedRoute({
     );
   }
 
-  // User not authenticated, will redirect (show nothing)
+  // If optional, render children regardless of auth state
+  if (optional) {
+    return <>{children}</>;
+  }
+
+  // For non-optional routes, only render if authenticated
   if (!user) {
     return null;
   }
 
-  // User is authenticated, render children
   return <>{children}</>;
 }
 

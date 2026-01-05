@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Platform } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,7 +56,13 @@ export default function TodayScreen() {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: theme.dark ? colors.backgroundDark : colors.background }]}
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: theme.dark ? colors.backgroundDark : colors.background,
+          paddingTop: Platform.OS === 'android' ? 20 : 0,
+        }
+      ]}
       edges={['top']}
     >
       <ScrollView
@@ -97,8 +103,8 @@ export default function TodayScreen() {
             ]}
           >
             <IconSymbol
-              ios_icon_name="celebration"
-              android_material_icon_name="celebration"
+              ios_icon_name="checkmark.circle.fill"
+              android_material_icon_name="check-circle"
               size={32}
               color={colors.success}
             />
@@ -126,7 +132,7 @@ export default function TodayScreen() {
           ) : habits.length === 0 ? (
             <View style={styles.emptyState}>
               <IconSymbol
-                ios_icon_name="add-circle"
+                ios_icon_name="plus.circle"
                 android_material_icon_name="add-circle"
                 size={64}
                 color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
@@ -163,7 +169,7 @@ export default function TodayScreen() {
         activeOpacity={0.8}
       >
         <IconSymbol
-          ios_icon_name="add"
+          ios_icon_name="plus"
           android_material_icon_name="add"
           size={28}
           color="#FFFFFF"
