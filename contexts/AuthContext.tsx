@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Platform } from "react-native";
 import { authClient, storeWebBearerToken } from "@/lib/auth";
@@ -71,38 +72,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchUser();
+    // Set a timeout to ensure loading doesn't hang forever
+    const timeoutId = setTimeout(() => {
+      console.log('[AuthContext] Loading timeout - setting loading to false');
+      setLoading(false);
+    }, 3000);
+
+    fetchUser().finally(() => {
+      clearTimeout(timeoutId);
+    });
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const fetchUser = async () => {
     try {
+      console.log('[AuthContext] Fetching user session...');
       setLoading(true);
-      const session = await authClient.getSession();
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session fetch timeout')), 2000)
+      );
+      
+      const sessionPromise = authClient.getSession();
+      
+      const session = await Promise.race([sessionPromise, timeoutPromise]) as any;
+      
       if (session?.data?.user) {
+        console.log('[AuthContext] User session found:', session.data.user.email);
         setUser(session.data.user as User);
       } else {
+        console.log('[AuthContext] No user session found');
         setUser(null);
       }
     } catch (error) {
-      console.error("Failed to fetch user:", error);
+      console.log('[AuthContext] Failed to fetch user (this is OK for freemium):', error);
       setUser(null);
     } finally {
+      console.log('[AuthContext] Setting loading to false');
       setLoading(false);
     }
   };
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
+      console.log('[AuthContext] Signing in with email:', email);
       await authClient.signIn.email({ email, password });
       await fetchUser();
     } catch (error) {
-      console.error("Email sign in failed:", error);
+      console.error('[AuthContext] Email sign in failed:', error);
       throw error;
     }
   };
 
   const signUpWithEmail = async (email: string, password: string, name?: string) => {
     try {
+      console.log('[AuthContext] Signing up with email:', email);
       await authClient.signUp.email({
         email,
         password,
@@ -110,13 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       await fetchUser();
     } catch (error) {
-      console.error("Email sign up failed:", error);
+      console.error('[AuthContext] Email sign up failed:', error);
       throw error;
     }
   };
 
   const signInWithGoogle = async () => {
     try {
+      console.log('[AuthContext] Signing in with Google');
       if (Platform.OS === "web") {
         const token = await openOAuthPopup("google");
         storeWebBearerToken(token);
@@ -129,13 +156,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchUser();
       }
     } catch (error) {
-      console.error("Google sign in failed:", error);
+      console.error('[AuthContext] Google sign in failed:', error);
       throw error;
     }
   };
 
   const signInWithApple = async () => {
     try {
+      console.log('[AuthContext] Signing in with Apple');
       if (Platform.OS === "web") {
         const token = await openOAuthPopup("apple");
         storeWebBearerToken(token);
@@ -148,13 +176,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchUser();
       }
     } catch (error) {
-      console.error("Apple sign in failed:", error);
+      console.error('[AuthContext] Apple sign in failed:', error);
       throw error;
     }
   };
 
   const signInWithGitHub = async () => {
     try {
+      console.log('[AuthContext] Signing in with GitHub');
       if (Platform.OS === "web") {
         const token = await openOAuthPopup("github");
         storeWebBearerToken(token);
@@ -167,20 +196,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchUser();
       }
     } catch (error) {
-      console.error("GitHub sign in failed:", error);
+      console.error('[AuthContext] GitHub sign in failed:', error);
       throw error;
     }
   };
 
   const signOut = async () => {
     try {
+      console.log('[AuthContext] Signing out');
       await authClient.signOut();
       setUser(null);
     } catch (error) {
-      console.error("Sign out failed:", error);
+      console.error('[AuthContext] Sign out failed:', error);
       throw error;
     }
   };
+
+  console.log('[AuthContext] Rendering with loading:', loading, 'user:', user?.email || 'none');
 
   return (
     <AuthContext.Provider

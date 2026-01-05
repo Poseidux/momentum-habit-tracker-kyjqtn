@@ -90,15 +90,10 @@ export default function RootLayout() {
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="auth" />
-                <Stack.Screen 
-                  name="auth/sign-in"
-                  options={{ presentation: 'modal' }}
-                />
-                <Stack.Screen 
-                  name="auth/sign-up"
-                  options={{ presentation: 'modal' }}
-                />
+                <Stack.Screen name="auth/sign-in" />
+                <Stack.Screen name="auth/sign-up" />
+                <Stack.Screen name="add-habit" />
+                <Stack.Screen name="habit/[id]" />
                 <Stack.Screen
                   name="modal"
                   options={{

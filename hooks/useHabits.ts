@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { Habit, HabitCheckIn, UserStats } from '@/types/habit';
-import { authenticatedGet, authenticatedPost, authenticatedPut, authenticatedDelete, BACKEND_URL } from '@/utils/api';
+import { authenticatedGet, authenticatedPost, authenticatedPut, authenticatedDelete, BACKEND_URL, isBackendConfigured } from '@/utils/api';
 
 // Log backend URL for debugging
 console.log('[useHabits] Backend URL:', BACKEND_URL);
+console.log('[useHabits] Backend configured:', isBackendConfigured());
 
 export function useHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -15,9 +16,25 @@ export function useHabits() {
     try {
       setLoading(true);
       setError(null);
+      
+      // If backend is not configured, use empty state
+      if (!isBackendConfigured()) {
+        console.log('[useHabits] Backend not configured - using empty state');
+        setHabits([]);
+        setLoading(false);
+        return;
+      }
+      
       console.log('[useHabits] Fetching habits from API...');
       
-      const response = await authenticatedGet<any>('/api/habits');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const fetchPromise = authenticatedGet<any>('/api/habits');
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
       console.log('[useHabits] Habits response:', response);
       
       // Transform API response to match our Habit type
@@ -45,7 +62,7 @@ export function useHabits() {
       setHabits(transformedHabits);
       console.log('[useHabits] Successfully loaded', transformedHabits.length, 'habits');
     } catch (err: any) {
-      console.error('[useHabits] Error fetching habits:', err);
+      console.log('[useHabits] Error fetching habits (using empty state):', err.message);
       setError(err.message || 'Failed to load habits');
       setHabits([]);
     } finally {
@@ -59,6 +76,10 @@ export function useHabits() {
 
   const addHabit = async (habit: Omit<Habit, 'id' | 'createdAt' | 'currentStreak' | 'longestStreak' | 'totalCompletions' | 'consistencyPercent' | 'habitStrength'>) => {
     try {
+      if (!isBackendConfigured()) {
+        throw new Error('Backend not configured. Please rebuild the app.');
+      }
+      
       console.log('[useHabits] Creating new habit:', habit);
       
       // Transform to API format
@@ -91,6 +112,10 @@ export function useHabits() {
 
   const updateHabit = async (id: string, updates: Partial<Habit>) => {
     try {
+      if (!isBackendConfigured()) {
+        throw new Error('Backend not configured. Please rebuild the app.');
+      }
+      
       console.log('[useHabits] Updating habit:', id, updates);
       
       // Transform to API format
@@ -123,6 +148,10 @@ export function useHabits() {
 
   const deleteHabit = async (id: string) => {
     try {
+      if (!isBackendConfigured()) {
+        throw new Error('Backend not configured. Please rebuild the app.');
+      }
+      
       console.log('[useHabits] Deleting habit:', id);
       
       await authenticatedDelete(`/api/habits/${id}`);
@@ -138,6 +167,10 @@ export function useHabits() {
 
   const checkInHabit = async (habitId: string, value?: number, note?: string, mood?: number, effort?: number) => {
     try {
+      if (!isBackendConfigured()) {
+        throw new Error('Backend not configured. Please rebuild the app.');
+      }
+      
       console.log('[useHabits] Checking in habit:', habitId);
       
       const apiPayload = {
@@ -189,9 +222,33 @@ export function useUserStats() {
     try {
       setLoading(true);
       setError(null);
+      
+      // If backend is not configured, use default stats
+      if (!isBackendConfigured()) {
+        console.log('[useUserStats] Backend not configured - using default stats');
+        setStats({
+          level: 1,
+          xp: 0,
+          xpToNextLevel: 100,
+          totalHabits: 0,
+          activeHabits: 0,
+          totalCheckIns: 0,
+          currentWeekStreak: 0,
+        });
+        setLoading(false);
+        return;
+      }
+      
       console.log('[useUserStats] Fetching user stats from API...');
       
-      const response = await authenticatedGet<any>('/api/stats/overview');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const fetchPromise = authenticatedGet<any>('/api/stats/overview');
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
       console.log('[useUserStats] Stats response:', response);
       
       // Transform API response to match our UserStats type
@@ -208,8 +265,9 @@ export function useUserStats() {
       setStats(statsData);
       console.log('[useUserStats] Successfully loaded stats');
     } catch (err: any) {
-      console.error('[useUserStats] Error fetching stats:', err);
+      console.log('[useUserStats] Error fetching stats (using default stats):', err.message);
       setError(err.message || 'Failed to load stats');
+      // Keep default stats on error
     } finally {
       setLoading(false);
     }
@@ -231,6 +289,14 @@ export function useHabitCheckIns(habitId: string, startDate?: string, endDate?: 
     try {
       setLoading(true);
       setError(null);
+      
+      if (!isBackendConfigured()) {
+        console.log('[useHabitCheckIns] Backend not configured - using empty state');
+        setCheckIns([]);
+        setLoading(false);
+        return;
+      }
+      
       console.log('[useHabitCheckIns] Fetching check-ins for habit:', habitId);
       
       // Build query params
@@ -239,7 +305,14 @@ export function useHabitCheckIns(habitId: string, startDate?: string, endDate?: 
       if (endDate) params.append('endDate', endDate);
       const queryString = params.toString() ? `?${params.toString()}` : '';
       
-      const response = await authenticatedGet<any>(`/api/check-ins/habit/${habitId}${queryString}`);
+      // Add timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const fetchPromise = authenticatedGet<any>(`/api/check-ins/habit/${habitId}${queryString}`);
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
       console.log('[useHabitCheckIns] Check-ins response:', response);
       
       // Transform API response to match our HabitCheckIn type
@@ -259,7 +332,7 @@ export function useHabitCheckIns(habitId: string, startDate?: string, endDate?: 
       setCheckIns(transformedCheckIns);
       console.log('[useHabitCheckIns] Successfully loaded', transformedCheckIns.length, 'check-ins');
     } catch (err: any) {
-      console.error('[useHabitCheckIns] Error fetching check-ins:', err);
+      console.log('[useHabitCheckIns] Error fetching check-ins (using empty state):', err.message);
       setError(err.message || 'Failed to load check-ins');
       setCheckIns([]);
     } finally {
@@ -288,9 +361,24 @@ export function useTodayCheckIns() {
     try {
       setLoading(true);
       setError(null);
+      
+      if (!isBackendConfigured()) {
+        console.log('[useTodayCheckIns] Backend not configured - using empty state');
+        setCheckIns([]);
+        setLoading(false);
+        return;
+      }
+      
       console.log('[useTodayCheckIns] Fetching today\'s check-ins...');
       
-      const response = await authenticatedGet<any>('/api/check-ins/today');
+      // Add timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      const fetchPromise = authenticatedGet<any>('/api/check-ins/today');
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as any;
       console.log('[useTodayCheckIns] Today\'s check-ins response:', response);
       
       // Transform API response
@@ -310,7 +398,7 @@ export function useTodayCheckIns() {
       setCheckIns(transformedCheckIns);
       console.log('[useTodayCheckIns] Successfully loaded', transformedCheckIns.length, 'check-ins');
     } catch (err: any) {
-      console.error('[useTodayCheckIns] Error fetching today\'s check-ins:', err);
+      console.log('[useTodayCheckIns] Error fetching today\'s check-ins (using empty state):', err.message);
       setError(err.message || 'Failed to load today\'s check-ins');
       setCheckIns([]);
     } finally {
