@@ -48,6 +48,7 @@ export function useHabits() {
         specificDays: h.scheduleConfig?.specificDays,
         timesPerWeek: h.scheduleConfig?.timesPerWeek,
         tags: h.tags || [],
+        customTags: h.customTags || [],
         color: h.color || '#6366F1',
         icon: h.icon || 'fitness-center',
         reminderTime: h.reminderTime,
@@ -94,6 +95,7 @@ export function useHabits() {
           timesPerWeek: habit.timesPerWeek,
         },
         tags: habit.tags,
+        customTags: habit.customTags,
         color: habit.color,
         icon: habit.icon,
         reminderTime: habit.reminderTime,
@@ -131,6 +133,7 @@ export function useHabits() {
         };
       }
       if (updates.tags) apiPayload.tags = updates.tags;
+      if (updates.customTags !== undefined) apiPayload.customTags = updates.customTags;
       if (updates.color) apiPayload.color = updates.color;
       if (updates.icon) apiPayload.icon = updates.icon;
       if (updates.reminderTime !== undefined) apiPayload.reminderTime = updates.reminderTime;
@@ -214,6 +217,7 @@ export function useUserStats() {
     activeHabits: 0,
     totalCheckIns: 0,
     currentWeekStreak: 0,
+    isPremium: false,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,6 +238,7 @@ export function useUserStats() {
           activeHabits: 0,
           totalCheckIns: 0,
           currentWeekStreak: 0,
+          isPremium: false,
         });
         setLoading(false);
         return;
@@ -260,6 +265,7 @@ export function useUserStats() {
         activeHabits: response.activeHabits || 0,
         totalCheckIns: response.totalCheckIns || 0,
         currentWeekStreak: response.currentWeekStreak || 0,
+        isPremium: response.isPremium || false,
       };
       
       setStats(statsData);

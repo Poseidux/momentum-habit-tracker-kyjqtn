@@ -12,6 +12,7 @@ export interface Habit {
   specificDays?: number[]; // 0-6 for Sunday-Saturday
   timesPerWeek?: number;
   tags: HabitTag[];
+  customTags?: string[]; // Premium feature: custom user-defined tags
   color: string;
   icon: string;
   reminderTime?: string;
@@ -45,6 +46,7 @@ export interface UserStats {
   activeHabits: number;
   totalCheckIns: number;
   currentWeekStreak: number;
+  isPremium?: boolean; // Premium status
 }
 
 export const HABIT_COLORS = [
@@ -52,10 +54,28 @@ export const HABIT_COLORS = [
   '#10B981', '#06B6D4', '#3B82F6', '#6366F1', '#A855F7',
 ];
 
+// Material Design Icons - verified names that work on Android/web
 export const HABIT_ICONS = [
-  'fitness-center', 'local-library', 'self-improvement', 'restaurant',
-  'bedtime', 'directions-run', 'water-drop', 'psychology',
-  'work', 'brush', 'music-note', 'savings',
+  'fitness-center',
+  'local-library',
+  'self-improvement',
+  'restaurant',
+  'bedtime',
+  'directions-run',
+  'water-drop',
+  'psychology',
+  'work',
+  'brush',
+  'music-note',
+  'savings',
+  'favorite',
+  'spa',
+  'emoji-events',
+  'lightbulb',
+  'coffee',
+  'pets',
+  'park',
+  'beach-access',
 ];
 
 export const HABIT_TAGS: HabitTag[] = [

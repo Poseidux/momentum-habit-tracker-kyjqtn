@@ -60,7 +60,6 @@ export default function TodayScreen() {
         styles.container, 
         { 
           backgroundColor: theme.dark ? colors.backgroundDark : colors.background,
-          paddingTop: Platform.OS === 'android' ? 20 : 0,
         }
       ]}
       edges={['top']}
@@ -73,7 +72,7 @@ export default function TodayScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
+        {/* Header - Moved up with less padding */}
         <View style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: theme.dark ? colors.textDark : colors.text }]}>
@@ -188,10 +187,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 8, // Reduced from 20 to move content up
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 16, // Reduced from 24 to move content up
   },
   greeting: {
     fontSize: 32,

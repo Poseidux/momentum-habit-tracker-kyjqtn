@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,21 +7,63 @@ import { Stack, useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
 import { HabitType, HabitSchedule, HabitTag, HABIT_COLORS, HABIT_ICONS, HABIT_TAGS } from '@/types/habit';
-import { useHabits } from '@/hooks/useHabits';
+import { useHabits, useUserStats } from '@/hooks/useHabits';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 function AddHabitScreenContent() {
   const theme = useTheme();
   const router = useRouter();
   const { addHabit } = useHabits();
+  const { stats } = useUserStats();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<HabitType>('yes_no');
   const [schedule, setSchedule] = useState<HabitSchedule>('daily');
   const [selectedTags, setSelectedTags] = useState<HabitTag[]>([]);
+  const [customTags, setCustomTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState('');
   const [selectedColor, setSelectedColor] = useState(HABIT_COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState(HABIT_ICONS[0]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const isPremium = stats.isPremium || false;
+
+  // Track unsaved changes
+  useEffect(() => {
+    const hasChanges = 
+      title.trim() !== '' ||
+      description.trim() !== '' ||
+      selectedTags.length > 0 ||
+      customTags.length > 0;
+    setHasUnsavedChanges(hasChanges);
+  }, [title, description, selectedTags, customTags]);
+
+  // Handle back button press with confirmation
+  useEffect(() => {
+    const unsubscribe = router.addListener?.('beforeRemove', (e: any) => {
+      if (!hasUnsavedChanges) {
+        return;
+      }
+
+      e.preventDefault();
+
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to discard them?',
+        [
+          { text: "Don't leave", style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [hasUnsavedChanges, router]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -29,7 +71,7 @@ function AddHabitScreenContent() {
       return;
     }
 
-    if (selectedTags.length === 0) {
+    if (selectedTags.length === 0 && customTags.length === 0) {
       Alert.alert('Error', 'Please select at least one tag');
       return;
     }
@@ -41,10 +83,12 @@ function AddHabitScreenContent() {
         type,
         schedule,
         tags: selectedTags,
+        customTags: customTags.length > 0 ? customTags : undefined,
         color: selectedColor,
         icon: selectedIcon,
       });
       
+      setHasUnsavedChanges(false);
       Alert.alert('Success', 'Habit created successfully!', [
         { text: 'OK', onPress: () => router.back() }
       ]);
@@ -60,6 +104,18 @@ function AddHabitScreenContent() {
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
+  };
+
+  const addCustomTag = () => {
+    const trimmedTag = customTagInput.trim();
+    if (trimmedTag && !customTags.includes(trimmedTag)) {
+      setCustomTags([...customTags, trimmedTag]);
+      setCustomTagInput('');
+    }
+  };
+
+  const removeCustomTag = (tag: string) => {
+    setCustomTags(customTags.filter(t => t !== tag));
   };
 
   return (
@@ -213,6 +269,87 @@ function AddHabitScreenContent() {
             </View>
           </View>
 
+          {/* Custom Tags (Premium Feature) */}
+          {isPremium && (
+            <View style={styles.section}>
+              <View style={styles.premiumHeader}>
+                <Text style={[styles.label, { color: theme.dark ? colors.textDark : colors.text }]}>
+                  Custom Tags
+                </Text>
+                <View style={styles.premiumBadge}>
+                  <IconSymbol
+                    ios_icon_name="star.fill"
+                    android_material_icon_name="star"
+                    size={12}
+                    color="#FFD700"
+                  />
+                  <Text style={styles.premiumText}>Premium</Text>
+                </View>
+              </View>
+              
+              {/* Custom tag input */}
+              <View style={styles.customTagInputRow}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.customTagInput,
+                    { 
+                      backgroundColor: theme.dark ? colors.cardDark : colors.card,
+                      borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
+                      color: theme.dark ? colors.textDark : colors.text,
+                    }
+                  ]}
+                  placeholder="Add custom tag..."
+                  placeholderTextColor={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
+                  value={customTagInput}
+                  onChangeText={setCustomTagInput}
+                  onSubmitEditing={addCustomTag}
+                />
+                <TouchableOpacity
+                  style={[styles.addTagButton, { backgroundColor: colors.primary }]}
+                  onPress={addCustomTag}
+                >
+                  <IconSymbol
+                    ios_icon_name="plus"
+                    android_material_icon_name="add"
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Display custom tags */}
+              {customTags.length > 0 && (
+                <View style={styles.customTagsList}>
+                  {customTags.map((tag, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.customTagChip,
+                        { 
+                          backgroundColor: colors.primary + '20',
+                          borderColor: colors.primary,
+                        }
+                      ]}
+                    >
+                      <Text style={[styles.customTagText, { color: colors.primary }]}>
+                        {tag}
+                      </Text>
+                      <TouchableOpacity onPress={() => removeCustomTag(tag)}>
+                        <IconSymbol
+                          ios_icon_name="xmark.circle.fill"
+                          android_material_icon_name="cancel"
+                          size={18}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Color Picker */}
           <View style={styles.section}>
             <Text style={[styles.label, { color: theme.dark ? colors.textDark : colors.text }]}>
@@ -231,7 +368,7 @@ function AddHabitScreenContent() {
                 >
                   {selectedColor === color && (
                     <IconSymbol
-                      ios_icon_name="check"
+                      ios_icon_name="checkmark"
                       android_material_icon_name="check"
                       size={20}
                       color="#FFFFFF"
@@ -303,6 +440,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
+  premiumHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFD70020',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  premiumText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFD700',
+  },
   input: {
     borderRadius: 12,
     padding: 16,
@@ -312,6 +469,40 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  customTagInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  customTagInput: {
+    flex: 1,
+  },
+  addTagButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customTagsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  customTagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  customTagText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   optionsRow: {
     flexDirection: 'row',

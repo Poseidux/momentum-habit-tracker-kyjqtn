@@ -72,7 +72,7 @@ export default function TodayScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
+        {/* Header - Moved up with less padding */}
         <View style={styles.header}>
           <View>
             <Text style={[styles.greeting, { color: theme.dark ? colors.textDark : colors.text }]}>
@@ -157,8 +157,8 @@ export default function TodayScreen() {
           )}
         </View>
 
-        {/* Bottom padding for tab bar */}
-        <View style={{ height: 40 }} />
+        {/* Bottom padding for floating tab bar */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Floating Add Button */}
@@ -187,10 +187,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 8, // Reduced from 20 to move content up
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 16, // Reduced from 24 to move content up
   },
   greeting: {
     fontSize: 32,

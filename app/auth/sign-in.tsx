@@ -1,23 +1,25 @@
 
-import { useAuth } from '@/contexts/AuthContext';
-import { Stack, useRouter } from 'expo-router';
-import { useTheme } from '@react-navigation/native';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import React, { useState } from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useTheme } from '@react-navigation/native';
+import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ADMIN_EMAIL = 'developerposeiduxfu39a33es@gmail.com';
 const ADMIN_PASSWORD = 'Developerposeiduxfu39a33eS00=';
 
 export default function SignInScreen() {
-  const { colors: themeColors } = useTheme();
+  const theme = useTheme();
+  const router = useRouter();
+  const { signInWithEmail, signInWithGoogle, signInWithApple } = useAuth();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { signInWithEmail, signInWithGoogle, signInWithApple } = useAuth();
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleEmailSignIn = async () => {
     if (!email || !password) {
@@ -25,172 +27,179 @@ export default function SignInScreen() {
       return;
     }
 
+    setLoading(true);
     try {
-      // Check for admin credentials first
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        // Grant full access - bypass normal auth
-        await signInWithEmail(email, password);
-        Alert.alert('Success', 'Full unrestricted access granted! 🎉');
-        router.replace('/(tabs)/(home)/');
-        return;
-      }
-
-      // Normal sign in
+      console.log('[SignIn] Attempting sign in with:', email);
       await signInWithEmail(email, password);
+      console.log('[SignIn] Sign in successful, navigating to home');
       router.replace('/(tabs)/(home)/');
     } catch (error: any) {
-      console.error('[SignIn] Error:', error);
-      Alert.alert('Sign In Failed', error.message || 'Invalid credentials');
+      console.error('[SignIn] Sign in failed:', error);
+      Alert.alert('Error', error.message || 'Failed to sign in. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setLoading(true);
     try {
       await signInWithGoogle();
       router.replace('/(tabs)/(home)/');
     } catch (error: any) {
-      console.error('[SignIn] Google error:', error);
-      Alert.alert('Google Sign In Failed', error.message);
+      console.error('[SignIn] Google sign in failed:', error);
+      Alert.alert('Error', error.message || 'Failed to sign in with Google');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAppleSignIn = async () => {
+    setLoading(true);
     try {
       await signInWithApple();
       router.replace('/(tabs)/(home)/');
     } catch (error: any) {
-      console.error('[SignIn] Apple error:', error);
-      Alert.alert('Apple Sign In Failed', error.message);
+      console.error('[SignIn] Apple sign in failed:', error);
+      Alert.alert('Error', error.message || 'Failed to sign in with Apple');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: themeColors.background,
-          paddingTop: Platform.OS === 'android' ? 20 : 0,
-        }
-      ]} 
-      edges={['top']}
-    >
+    <>
       <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+      <LinearGradient
+        colors={theme.dark ? ['#1a1a2e', '#16213e'] : ['#6366F1', '#8B5CF6']}
+        style={styles.gradient}
       >
-        <View style={styles.content}>
-          <TouchableOpacity 
-            style={[styles.backButton, { backgroundColor: colors.surface }]}
-            onPress={() => router.back()}
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardView}
           >
-            <IconSymbol 
-              ios_icon_name="chevron.left" 
-              android_material_icon_name="arrow-back" 
-              size={24} 
-              color={colors.primary} 
-            />
-          </TouchableOpacity>
+            <View style={styles.content}>
+              {/* Header */}
+              <View style={styles.header}>
+                <Text style={styles.title}>Welcome Back</Text>
+                <Text style={styles.subtitle}>Sign in to continue building momentum</Text>
+              </View>
 
-          <Text style={[styles.title, { color: themeColors.text }]}>Welcome Back</Text>
-          <Text style={[styles.subtitle, { color: themeColors.text }]}>
-            Sign in to sync your habits across devices
-          </Text>
-
-          <View style={styles.form}>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: themeColors.card,
-                color: themeColors.text,
-                borderColor: colors.border
-              }]}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: themeColors.card,
-                color: themeColors.text,
-                borderColor: colors.border
-              }]}
-              placeholder="Password"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-
-            <TouchableOpacity 
-              style={styles.primaryButton}
-              onPress={handleEmailSignIn}
-            >
-              <LinearGradient
-                colors={[colors.primary, colors.primaryDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradient}
-              >
-                <Text style={styles.primaryButtonText}>Sign In</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
-
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity 
-                style={[styles.socialButton, { backgroundColor: themeColors.card, borderColor: colors.border }]}
-                onPress={handleAppleSignIn}
-              >
-                <IconSymbol 
-                  ios_icon_name="apple.logo" 
-                  android_material_icon_name="apple" 
-                  size={20} 
-                  color={themeColors.text} 
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <IconSymbol
+                  ios_icon_name="envelope.fill"
+                  android_material_icon_name="email"
+                  size={20}
+                  color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
                 />
-                <Text style={[styles.socialButtonText, { color: themeColors.text }]}>
-                  Continue with Apple
+                <TextInput
+                  style={[styles.input, { color: theme.dark ? colors.textDark : colors.text }]}
+                  placeholder="Email"
+                  placeholderTextColor={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  editable={!loading}
+                />
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <IconSymbol
+                  ios_icon_name="lock.fill"
+                  android_material_icon_name="lock"
+                  size={20}
+                  color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
+                />
+                <TextInput
+                  style={[styles.input, { color: theme.dark ? colors.textDark : colors.text }]}
+                  placeholder="Password"
+                  placeholderTextColor={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  editable={!loading}
+                />
+              </View>
+
+              {/* Sign In Button */}
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton, loading && styles.buttonDisabled]}
+                onPress={handleEmailSignIn}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Text>
               </TouchableOpacity>
-            )}
 
-            <TouchableOpacity 
-              style={[styles.socialButton, { backgroundColor: themeColors.card, borderColor: colors.border }]}
-              onPress={handleGoogleSignIn}
-            >
-              <IconSymbol 
-                ios_icon_name="globe" 
-                android_material_icon_name="language" 
-                size={20} 
-                color={themeColors.text} 
-              />
-              <Text style={[styles.socialButtonText, { color: themeColors.text }]}>
-                Continue with Google
-              </Text>
-            </TouchableOpacity>
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or continue with</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-            <TouchableOpacity onPress={() => router.push('/auth/sign-up')}>
-              <Text style={[styles.linkText, { color: colors.primary }]}>
-                Don&apos;t have an account? Sign Up
+              {/* Social Sign In Buttons */}
+              <View style={styles.socialButtons}>
+                <TouchableOpacity
+                  style={[styles.socialButton, loading && styles.buttonDisabled]}
+                  onPress={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <IconSymbol
+                    ios_icon_name="g.circle.fill"
+                    android_material_icon_name="g-translate"
+                    size={24}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.socialButtonText}>Google</Text>
+                </TouchableOpacity>
+
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={[styles.socialButton, loading && styles.buttonDisabled]}
+                    onPress={handleAppleSignIn}
+                    disabled={loading}
+                  >
+                    <IconSymbol
+                      ios_icon_name="apple.logo"
+                      android_material_icon_name="apple"
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.socialButtonText}>Apple</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Sign Up Link */}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don&apos;t have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/auth/sign-up')} disabled={loading}>
+                  <Text style={styles.footerLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Admin Hint */}
+              <Text style={styles.hint}>
+                Hint: Use the admin credentials for full access
               </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </LinearGradient>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -199,81 +208,116 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 24,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    paddingHorizontal: 24,
     justifyContent: 'center',
+  },
+  header: {
+    marginBottom: 40,
     alignItems: 'center',
-    marginBottom: 24,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 32,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    textAlign: 'center',
   },
-  form: {
-    gap: 16,
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   input: {
-    height: 56,
-    borderRadius: 16,
-    paddingHorizontal: 16,
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     fontSize: 16,
-    borderWidth: 1,
+    color: '#FFFFFF',
   },
-  primaryButton: {
-    height: 56,
-    borderRadius: 16,
-    overflow: 'hidden',
+  button: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
     marginTop: 8,
   },
-  gradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  primaryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 8,
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.7,
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
   socialButton: {
-    height: 56,
-    borderRadius: 16,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   socialButtonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  linkText: {
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
+  footerText: {
     fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
+  footerLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  hint: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.6,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 16,
   },
 });

@@ -1,13 +1,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Platform } from "react-native";
-import { authClient, storeWebBearerToken } from "@/lib/auth";
+import { authClient, storeWebBearerToken, storeBearerTokenFromSession } from "@/lib/auth";
 
 interface User {
   id: string;
   email: string;
   name?: string;
   image?: string;
+  isPremium?: boolean;
 }
 
 interface AuthContextType {
@@ -101,7 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (session?.data?.user) {
         console.log('[AuthContext] User session found:', session.data.user.email);
-        setUser(session.data.user as User);
+        
+        // Store bearer token for API calls
+        await storeBearerTokenFromSession();
+        
+        setUser({
+          ...session.data.user,
+          isPremium: session.data.user.isPremium || false,
+        } as User);
       } else {
         console.log('[AuthContext] No user session found');
         setUser(null);
@@ -118,7 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithEmail = async (email: string, password: string) => {
     try {
       console.log('[AuthContext] Signing in with email:', email);
-      await authClient.signIn.email({ email, password });
+      const result = await authClient.signIn.email({ email, password });
+      console.log('[AuthContext] Sign in result:', result);
+      
+      // Store the bearer token
+      if (result?.data?.session?.token) {
+        await storeWebBearerToken(result.data.session.token);
+      } else {
+        await storeBearerTokenFromSession();
+      }
+      
       await fetchUser();
     } catch (error) {
       console.error('[AuthContext] Email sign in failed:', error);
@@ -129,11 +146,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, name?: string) => {
     try {
       console.log('[AuthContext] Signing up with email:', email);
-      await authClient.signUp.email({
+      const result = await authClient.signUp.email({
         email,
         password,
         name,
       });
+      console.log('[AuthContext] Sign up result:', result);
+      
+      // Store the bearer token
+      if (result?.data?.session?.token) {
+        await storeWebBearerToken(result.data.session.token);
+      } else {
+        await storeBearerTokenFromSession();
+      }
+      
       await fetchUser();
     } catch (error) {
       console.error('[AuthContext] Email sign up failed:', error);
@@ -146,13 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] Signing in with Google');
       if (Platform.OS === "web") {
         const token = await openOAuthPopup("google");
-        storeWebBearerToken(token);
+        await storeWebBearerToken(token);
         await fetchUser();
       } else {
         await authClient.signIn.social({
           provider: "google",
           callbackURL: "/(tabs)/(home)/",
         });
+        await storeBearerTokenFromSession();
         await fetchUser();
       }
     } catch (error) {
@@ -166,13 +193,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] Signing in with Apple');
       if (Platform.OS === "web") {
         const token = await openOAuthPopup("apple");
-        storeWebBearerToken(token);
+        await storeWebBearerToken(token);
         await fetchUser();
       } else {
         await authClient.signIn.social({
           provider: "apple",
           callbackURL: "/(tabs)/(home)/",
         });
+        await storeBearerTokenFromSession();
         await fetchUser();
       }
     } catch (error) {
@@ -186,13 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] Signing in with GitHub');
       if (Platform.OS === "web") {
         const token = await openOAuthPopup("github");
-        storeWebBearerToken(token);
+        await storeWebBearerToken(token);
         await fetchUser();
       } else {
         await authClient.signIn.social({
           provider: "github",
           callbackURL: "/(tabs)/(home)/",
         });
+        await storeBearerTokenFromSession();
         await fetchUser();
       }
     } catch (error) {
