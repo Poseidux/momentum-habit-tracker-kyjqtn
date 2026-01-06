@@ -40,7 +40,7 @@ export default function TodayScreen() {
   useEffect(() => {
     refreshHabits();
     refreshCheckIns();
-  }, []);
+  }, [refreshHabits, refreshCheckIns]);
 
   const onRefresh = async () => {
     setRefreshing(true);

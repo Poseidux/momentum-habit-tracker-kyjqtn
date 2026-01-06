@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Habit, CheckIn } from '@/types/habit';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,11 +13,18 @@ export function useHabits() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  useEffect(() => {
-    refreshHabits();
-  }, [user]);
+  const loadLocalHabits = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem(HABITS_KEY);
+      if (stored) {
+        setHabits(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading local habits:', error);
+    }
+  }, []);
 
-  const refreshHabits = async () => {
+  const refreshHabits = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -40,18 +47,11 @@ export function useHabits() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, loadLocalHabits]);
 
-  const loadLocalHabits = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(HABITS_KEY);
-      if (stored) {
-        setHabits(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading local habits:', error);
-    }
-  };
+  useEffect(() => {
+    refreshHabits();
+  }, [refreshHabits]);
 
   const saveHabit = async (habit: Omit<Habit, 'id' | 'createdAt' | 'currentStreak' | 'longestStreak' | 'totalCheckIns'>) => {
     try {
@@ -149,11 +149,7 @@ export function useTodayCheckIns() {
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const { user } = useAuth();
 
-  useEffect(() => {
-    refreshCheckIns();
-  }, [user]);
-
-  const refreshCheckIns = async () => {
+  const refreshCheckIns = useCallback(async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
 
@@ -176,7 +172,11 @@ export function useTodayCheckIns() {
     } catch (error) {
       console.error('Error refreshing check-ins:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    refreshCheckIns();
+  }, [refreshCheckIns]);
 
   return { checkIns, refreshCheckIns };
 }
@@ -191,11 +191,7 @@ export function useUserStats() {
   });
   const { user } = useAuth();
 
-  useEffect(() => {
-    refreshStats();
-  }, [user]);
-
-  const refreshStats = async () => {
+  const refreshStats = useCallback(async () => {
     try {
       // TODO: Backend Integration - Fetch user stats from the backend API
       if (user && isBackendConfigured()) {
@@ -222,7 +218,11 @@ export function useUserStats() {
     } catch (error) {
       console.error('Error refreshing stats:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    refreshStats();
+  }, [refreshStats]);
 
   return { stats, refreshStats };
 }
