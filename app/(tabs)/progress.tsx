@@ -105,13 +105,14 @@ export default function ProgressScreen() {
             <View style={styles.heatmapLegend}>
               <Text style={[styles.legendText, { color: colors.textTertiary }]}>Less</Text>
               {[0, 1, 2, 3, 4].map((intensity, index) => (
-                <View
-                  key={`legend-${index}`}
-                  style={[
-                    styles.legendCell,
-                    { backgroundColor: getHeatmapColor(intensity) }
-                  ]}
-                />
+                <React.Fragment key={`legend-${index}`}>
+                  <View
+                    style={[
+                      styles.legendCell,
+                      { backgroundColor: getHeatmapColor(intensity) }
+                    ]}
+                  />
+                </React.Fragment>
               ))}
               <Text style={[styles.legendText, { color: colors.textTertiary }]}>More</Text>
             </View>
