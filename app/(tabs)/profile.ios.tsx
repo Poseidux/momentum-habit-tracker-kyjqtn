@@ -1,23 +1,23 @@
 
-import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'expo-router';
-import { useAppTheme } from '@/contexts/ThemeContext';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
+import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useAppTheme } from '@/contexts/ThemeContext';
+import React from 'react';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { IconSymbol } from '@/components/IconSymbol';
 
 export default function ProfileScreen() {
+  const { currentTheme, setTheme, themes } = useAppTheme();
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { currentTheme, setTheme, themes } = useAppTheme();
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      router.replace('/auth');
+      Alert.alert('Success', 'Signed out successfully');
     } catch (error) {
       console.error('Sign out error:', error);
       Alert.alert('Error', 'Failed to sign out');
@@ -28,226 +28,102 @@ export default function ProfileScreen() {
     router.push('/auth');
   };
 
-  const handleThemeChange = async (themeId: string) => {
-    try {
-      await setTheme(themeId);
-    } catch (error) {
-      console.error('Theme change error:', error);
-      Alert.alert('Error', 'Failed to change theme');
-    }
+  const handleThemeChange = (themeId: string) => {
+    setTheme(themeId);
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]} edges={['top']}>
-      <LinearGradient
-        colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>Profile</Text>
-      </LinearGradient>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme?.colors?.background || '#0F172A' }]} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: currentTheme?.colors?.text || '#F1F5F9' }]}>Profile</Text>
+      </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* User Info */}
-        <Animated.View entering={FadeInDown.delay(100)} style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}>
-          <View style={styles.profileSection}>
-            <LinearGradient
-              colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatar}
-            >
-              <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={40} color="#FFFFFF" />
-            </LinearGradient>
-            <View style={styles.userInfo}>
-              <Text style={[styles.userName, { color: currentTheme.colors.text }]}>
-                {user?.name || user?.email || 'Guest'}
-              </Text>
-              <Text style={[styles.userEmail, { color: currentTheme.colors.textSecondary }]}>
-                {user?.email || 'Not signed in'}
-              </Text>
+      <ScrollView style={styles.content}>
+        {user ? (
+          <Animated.View entering={FadeInDown.delay(100)}>
+            <View style={[styles.card, { backgroundColor: currentTheme?.colors?.surface || '#1E293B' }]}>
+              <View style={[styles.avatar, { backgroundColor: currentTheme?.colors?.primary || '#6366F1' }]}>
+                <Text style={styles.avatarText}>{user.name?.[0] || user.email[0].toUpperCase()}</Text>
+              </View>
+              <Text style={[styles.userName, { color: currentTheme?.colors?.text || '#F1F5F9' }]}>{user.name || 'User'}</Text>
+              <Text style={[styles.userEmail, { color: currentTheme?.colors?.textSecondary || '#94A3B8' }]}>{user.email}</Text>
+              {user.isPremium && (
+                <View style={[styles.premiumBadge, { backgroundColor: currentTheme?.colors?.primary || '#6366F1' }]}>
+                  <Text style={styles.premiumText}>Premium</Text>
+                </View>
+              )}
             </View>
-          </View>
+          </Animated.View>
+        ) : (
+          <Animated.View entering={FadeInDown.delay(100)}>
+            <TouchableOpacity
+              style={[styles.signInButton, { backgroundColor: currentTheme?.colors?.primary || '#6366F1' }]}
+              onPress={handleSignIn}
+            >
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        <Animated.View entering={FadeInDown.delay(200)}>
+          <Text style={[styles.sectionTitle, { color: currentTheme?.colors?.text || '#F1F5F9' }]}>Themes</Text>
+          {themes.map((theme, index) => (
+            <TouchableOpacity
+              key={theme.id}
+              style={[
+                styles.themeCard,
+                { backgroundColor: currentTheme?.colors?.surface || '#1E293B' },
+                currentTheme?.id === theme.id && { borderColor: currentTheme?.colors?.primary || '#6366F1', borderWidth: 2 }
+              ]}
+              onPress={() => handleThemeChange(theme.id)}
+            >
+              <LinearGradient
+                colors={theme.colors.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.themePreview}
+              />
+              <Text style={[styles.themeName, { color: currentTheme?.colors?.text || '#F1F5F9' }]}>{theme.name}</Text>
+              {currentTheme?.id === theme.id && (
+                <IconSymbol ios_icon_name="checkmark.circle.fill" android_material_icon_name="check-circle" size={24} color={currentTheme?.colors?.primary || '#6366F1'} />
+              )}
+            </TouchableOpacity>
+          ))}
         </Animated.View>
 
-        {/* Theme Selection */}
-        <Animated.View entering={FadeInDown.delay(200)} style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Theme</Text>
-          <View style={styles.themesGrid}>
-            {themes.map((theme, index) => (
-              <React.Fragment key={`theme-${index}`}>
-                <TouchableOpacity
-                  style={[
-                    styles.themeCard,
-                    { backgroundColor: currentTheme.colors.surface },
-                    currentTheme.id === theme.id && { borderColor: currentTheme.colors.primary, borderWidth: 3 }
-                  ]}
-                  onPress={() => handleThemeChange(theme.id)}
-                >
-                  <LinearGradient
-                    colors={theme.colors.gradient || [theme.colors.primary, theme.colors.secondary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.themePreview}
-                  />
-                  <Text style={[styles.themeName, { color: currentTheme.colors.text }]}>{theme.name}</Text>
-                  {currentTheme.id === theme.id && (
-                    <View style={[styles.checkBadge, { backgroundColor: currentTheme.colors.primary }]}>
-                      <IconSymbol ios_icon_name="checkmark" android_material_icon_name="check" size={12} color="#FFF" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </React.Fragment>
-            ))}
-          </View>
-        </Animated.View>
-
-        {/* Account Actions */}
-        <Animated.View entering={FadeInDown.delay(300)} style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}>
-          {user ? (
-            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-              <View style={[styles.menuIconContainer, { backgroundColor: currentTheme.colors.error + '20' }]}>
-                <IconSymbol ios_icon_name="arrow.right.square" android_material_icon_name="logout" size={24} color={currentTheme.colors.error} />
-              </View>
-              <Text style={[styles.menuText, { color: currentTheme.colors.text }]}>Sign Out</Text>
-              <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={20} color={currentTheme.colors.textSecondary} />
+        {user && (
+          <Animated.View entering={FadeInDown.delay(300)}>
+            <TouchableOpacity
+              style={[styles.signOutButton, { backgroundColor: currentTheme?.colors?.error || '#EF4444' }]}
+              onPress={handleSignOut}
+            >
+              <Text style={styles.signOutButtonText}>Sign Out</Text>
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.menuItem} onPress={handleSignIn}>
-              <View style={[styles.menuIconContainer, { backgroundColor: currentTheme.colors.primary + '20' }]}>
-                <IconSymbol ios_icon_name="arrow.right.square" android_material_icon_name="login" size={24} color={currentTheme.colors.primary} />
-              </View>
-              <Text style={[styles.menuText, { color: currentTheme.colors.text }]}>Sign In</Text>
-              <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={20} color={currentTheme.colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
+          </Animated.View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFF',
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 100,
-    gap: 20,
-  },
-  card: {
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-  },
-  section: {
-    gap: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  themesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  themeCard: {
-    width: '48%',
-    borderRadius: 16,
-    padding: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  themePreview: {
-    width: '100%',
-    height: 60,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  themeName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  checkBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
-  },
-  menuIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  header: { padding: 24, paddingTop: 16 },
+  headerTitle: { fontSize: 32, fontWeight: 'bold' },
+  content: { flex: 1, padding: 16 },
+  card: { padding: 24, borderRadius: 16, alignItems: 'center', marginBottom: 24 },
+  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  avatarText: { fontSize: 32, fontWeight: 'bold', color: '#FFF' },
+  userName: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
+  userEmail: { fontSize: 16 },
+  premiumBadge: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 12 },
+  premiumText: { fontSize: 14, fontWeight: '600', color: '#FFF' },
+  signInButton: { padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 24 },
+  signInButtonText: { fontSize: 18, fontWeight: '600', color: '#FFF' },
+  sectionTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
+  themeCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 12 },
+  themePreview: { width: 40, height: 40, borderRadius: 20, marginRight: 16 },
+  themeName: { flex: 1, fontSize: 16, fontWeight: '600' },
+  signOutButton: { padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24, marginBottom: 40 },
+  signOutButtonText: { fontSize: 18, fontWeight: '600', color: '#FFF' },
 });

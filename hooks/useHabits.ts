@@ -1,77 +1,133 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Habit, CheckIn } from '@/types/habit';
-import { authenticatedGet, authenticatedPost, authenticatedDelete, isBackendConfigured } from '@/utils/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { authenticatedGet, authenticatedPost, isBackendConfigured } from '@/utils/api';
 
-const HABITS_KEY = 'habits';
-const CHECKINS_KEY = 'checkins';
+const HABITS_KEY = 'momentum_habits';
+const CHECKINS_KEY = 'momentum_checkins';
 
-export const useHabits = () => {
+export function useHabits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
-    loadHabits();
+    refreshHabits();
   }, [user]);
 
-  const loadHabits = async () => {
+  const refreshHabits = async () => {
     try {
       setLoading(true);
+      
+      // TODO: Backend Integration - Fetch habits from the backend API
       if (user && isBackendConfigured()) {
         const response = await authenticatedGet('/api/habits');
-        setHabits(response.habits || []);
+        if (response.ok) {
+          const data = await response.json();
+          setHabits(data.habits || []);
+          await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(data.habits || []));
+        } else {
+          await loadLocalHabits();
+        }
       } else {
-        const stored = await AsyncStorage.getItem(HABITS_KEY);
-        setHabits(stored ? JSON.parse(stored) : []);
+        await loadLocalHabits();
       }
     } catch (error) {
-      console.error('Error loading habits:', error);
-      setHabits([]);
+      console.error('Error refreshing habits:', error);
+      await loadLocalHabits();
     } finally {
       setLoading(false);
     }
   };
 
-  const saveHabit = async (habit: Omit<Habit, 'id' | 'createdAt'>) => {
+  const loadLocalHabits = async () => {
     try {
-      if (user && isBackendConfigured()) {
-        const response = await authenticatedPost('/api/habits', habit);
-        await loadHabits();
-        return response.habit;
-      } else {
-        const newHabit: Habit = {
-          ...habit,
-          id: Date.now().toString(),
-          createdAt: new Date().toISOString(),
-        };
-        const updated = [...habits, newHabit];
-        await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(updated));
-        setHabits(updated);
-        return newHabit;
+      const stored = await AsyncStorage.getItem(HABITS_KEY);
+      if (stored) {
+        setHabits(JSON.parse(stored));
       }
+    } catch (error) {
+      console.error('Error loading local habits:', error);
+    }
+  };
+
+  const saveHabit = async (habit: Omit<Habit, 'id' | 'createdAt' | 'currentStreak' | 'longestStreak' | 'totalCheckIns'>) => {
+    try {
+      const newHabit: Habit = {
+        ...habit,
+        id: Date.now().toString(),
+        currentStreak: 0,
+        longestStreak: 0,
+        totalCheckIns: 0,
+        createdAt: new Date().toISOString(),
+        userId: user?.id,
+      };
+
+      // TODO: Backend Integration - Save habit to the backend API
+      if (user && isBackendConfigured()) {
+        const response = await authenticatedPost('/api/habits', newHabit);
+        if (response.ok) {
+          const data = await response.json();
+          const updatedHabits = [...habits, data.habit];
+          setHabits(updatedHabits);
+          await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(updatedHabits));
+          return;
+        }
+      }
+
+      const updatedHabits = [...habits, newHabit];
+      setHabits(updatedHabits);
+      await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(updatedHabits));
     } catch (error) {
       console.error('Error saving habit:', error);
       throw error;
     }
   };
 
-  const addHabit = saveHabit;
-
-  const deleteHabit = async (habitId: string) => {
+  const checkInHabit = async (habitId: string, value?: number, note?: string) => {
     try {
+      const checkIn: CheckIn = {
+        id: Date.now().toString(),
+        habitId,
+        date: new Date().toISOString().split('T')[0],
+        value,
+        note,
+        createdAt: new Date().toISOString(),
+        userId: user?.id,
+      };
+
+      // TODO: Backend Integration - Submit check-in to the backend API
       if (user && isBackendConfigured()) {
-        await authenticatedDelete(`/api/habits/${habitId}`);
-        await loadHabits();
-      } else {
-        const updated = habits.filter(h => h.id !== habitId);
-        await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(updated));
-        setHabits(updated);
+        const response = await authenticatedPost('/api/check-ins', checkIn);
+        if (response.ok) {
+          await refreshHabits();
+          return;
+        }
       }
+
+      const updatedHabits = habits.map(h => {
+        if (h.id === habitId) {
+          return {
+            ...h,
+            currentStreak: h.currentStreak + 1,
+            longestStreak: Math.max(h.longestStreak, h.currentStreak + 1),
+            totalCheckIns: h.totalCheckIns + 1,
+          };
+        }
+        return h;
+      });
+
+      setHabits(updatedHabits);
+      await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(updatedHabits));
+
+      const stored = await AsyncStorage.getItem(CHECKINS_KEY);
+      const checkIns = stored ? JSON.parse(stored) : [];
+      checkIns.push(checkIn);
+      await AsyncStorage.setItem(CHECKINS_KEY, JSON.stringify(checkIns));
     } catch (error) {
-      console.error('Error deleting habit:', error);
+      console.error('Error checking in habit:', error);
       throw error;
     }
   };
@@ -79,94 +135,76 @@ export const useHabits = () => {
   return {
     habits,
     loading,
+    refreshHabits,
     saveHabit,
-    addHabit,
-    deleteHabit,
-    refreshHabits: loadHabits,
+    addHabit: saveHabit,
+    checkInHabit,
   };
-};
+}
 
-export const useTodayCheckIns = () => {
+export function useTodayCheckIns() {
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
-    loadCheckIns();
+    refreshCheckIns();
   }, [user]);
 
-  const loadCheckIns = async () => {
+  const refreshCheckIns = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
+
+      // TODO: Backend Integration - Fetch today's check-ins from the backend API
       if (user && isBackendConfigured()) {
         const response = await authenticatedGet(`/api/check-ins?date=${today}`);
-        setCheckIns(response.checkIns || []);
-      } else {
-        const stored = await AsyncStorage.getItem(CHECKINS_KEY);
-        const all: CheckIn[] = stored ? JSON.parse(stored) : [];
-        setCheckIns(all.filter(c => c.date === today));
+        if (response.ok) {
+          const data = await response.json();
+          setCheckIns(data.checkIns || []);
+          return;
+        }
+      }
+
+      const stored = await AsyncStorage.getItem(CHECKINS_KEY);
+      if (stored) {
+        const allCheckIns: CheckIn[] = JSON.parse(stored);
+        const todayCheckIns = allCheckIns.filter(c => c.date === today);
+        setCheckIns(todayCheckIns);
       }
     } catch (error) {
-      console.error('Error loading check-ins:', error);
-      setCheckIns([]);
+      console.error('Error refreshing check-ins:', error);
     }
   };
 
-  const checkIn = async (habitId: string, value?: number, note?: string) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      if (user && isBackendConfigured()) {
-        await authenticatedPost('/api/check-ins', { habitId, date: today, value, note });
-        await loadCheckIns();
-      } else {
-        const stored = await AsyncStorage.getItem(CHECKINS_KEY);
-        const all: CheckIn[] = stored ? JSON.parse(stored) : [];
-        
-        // Remove existing check-in for today if it exists
-        const filtered = all.filter(c => !(c.habitId === habitId && c.date === today));
-        
-        const newCheckIn: CheckIn = {
-          id: Date.now().toString(),
-          habitId,
-          date: today,
-          value,
-          note,
-          createdAt: new Date().toISOString(),
-        };
-        const updated = [...filtered, newCheckIn];
-        await AsyncStorage.setItem(CHECKINS_KEY, JSON.stringify(updated));
-        setCheckIns(updated.filter(c => c.date === today));
-      }
-    } catch (error) {
-      console.error('Error checking in:', error);
-      throw error;
-    }
-  };
+  return { checkIns, refreshCheckIns };
+}
 
-  return {
-    checkIns,
-    checkIn,
-    refreshCheckIns: loadCheckIns,
-  };
-};
-
-export const useUserStats = () => {
-  const [stats, setStats] = useState({ level: 1, xp: 0, nextLevelXp: 100, totalCheckIns: 0 });
+export function useUserStats() {
+  const [stats, setStats] = useState({
+    totalXP: 0,
+    level: 1,
+    currentStreak: 0,
+    totalHabits: 0,
+  });
   const { user } = useAuth();
 
   useEffect(() => {
-    loadStats();
+    refreshStats();
   }, [user]);
 
-  const loadStats = async () => {
+  const refreshStats = async () => {
     try {
+      // TODO: Backend Integration - Fetch user stats from the backend API
       if (user && isBackendConfigured()) {
-        const response = await authenticatedGet('/api/stats');
-        setStats(response.stats || stats);
+        const response = await authenticatedGet('/api/user/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data.stats || stats);
+        }
       }
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('Error refreshing stats:', error);
     }
   };
 
-  return stats;
-};
+  return { stats, refreshStats };
+}

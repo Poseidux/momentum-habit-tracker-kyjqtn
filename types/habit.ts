@@ -4,21 +4,20 @@ export type HabitSchedule = 'daily' | 'specific_days' | 'x_per_week';
 
 export interface Habit {
   id: string;
-  title: string;
-  description?: string;
+  name: string;
   type: HabitType;
   schedule: HabitSchedule;
-  scheduleDays?: number[];
-  scheduleCount?: number;
-  icon?: string;
-  customIcon?: string;
+  specificDays?: number[]; // 0-6 for Sun-Sat
+  timesPerWeek?: number;
+  icon: string;
   color: string;
   tags: string[];
   reminderTime?: string;
+  currentStreak: number;
+  longestStreak: number;
+  totalCheckIns: number;
   createdAt: string;
-  streak?: number;
-  strength?: number;
-  totalCheckIns?: number;
+  userId?: string;
 }
 
 export interface CheckIn {
@@ -30,6 +29,7 @@ export interface CheckIn {
   mood?: number;
   effort?: number;
   createdAt: string;
+  userId?: string;
 }
 
 export const HABIT_COLORS = [
@@ -38,12 +38,12 @@ export const HABIT_COLORS = [
 ];
 
 export const HABIT_ICONS = [
-  'checkmark.circle', 'star', 'heart', 'flame',
-  'bolt', 'leaf', 'drop', 'moon',
-  'sun.max', 'book', 'dumbbell', 'fork.knife',
+  'fitness', 'book', 'water-drop', 'restaurant',
+  'self-improvement', 'bedtime', 'psychology', 'work',
+  'music-note', 'palette', 'code', 'language',
 ];
 
 export const HABIT_TAGS = [
-  'Health', 'Fitness', 'Mind', 'Study',
-  'Work', 'Social', 'Creative', 'Finance',
+  'Health', 'Fitness', 'Study', 'Work',
+  'Mindfulness', 'Creativity', 'Social', 'Finance',
 ];
