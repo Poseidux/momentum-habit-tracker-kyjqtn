@@ -1,49 +1,53 @@
 
-export type HabitType = 'yes_no' | 'count' | 'duration';
-export type HabitSchedule = 'daily' | 'specific_days' | 'x_per_week';
+export type HabitType = 'yesno' | 'count' | 'duration';
+export type HabitSchedule = 'daily' | 'specific' | 'weekly';
 
 export interface Habit {
   id: string;
+  userId: string;
   name: string;
   type: HabitType;
   schedule: HabitSchedule;
   specificDays?: number[]; // 0-6 for Sun-Sat
-  timesPerWeek?: number;
-  icon: string;
+  weeklyTarget?: number; // For weekly schedule
   color: string;
+  icon: string;
   tags: string[];
   reminderTime?: string;
-  currentStreak: number;
-  longestStreak: number;
-  totalCheckIns: number;
   createdAt: string;
-  userId?: string;
+  updatedAt: string;
 }
 
 export interface CheckIn {
   id: string;
   habitId: string;
+  userId: string;
   date: string;
-  value?: number;
+  value: number; // 1 for yes/no, count for count type, minutes for duration
   note?: string;
-  mood?: number;
-  effort?: number;
+  mood?: number; // 1-5
+  effort?: number; // 1-5
   createdAt: string;
-  userId?: string;
+}
+
+export interface UserStats {
+  totalXP: number;
+  level: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalCheckIns: number;
+  badges: string[];
 }
 
 export const HABIT_COLORS = [
-  '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
-  '#F59E0B', '#10B981', '#06B6D4', '#3B82F6',
+  '#6B4EFF', '#0EA5E9', '#059669', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6',
 ];
 
 export const HABIT_ICONS = [
-  'fitness', 'book', 'water-drop', 'restaurant',
-  'self-improvement', 'bedtime', 'psychology', 'work',
-  'music-note', 'palette', 'code', 'language',
+  'checkmark.circle', 'star', 'heart', 'bolt', 'flame', 'drop', 'leaf', 'moon',
+  'sun.max', 'book', 'dumbbell', 'fork.knife', 'bed.double', 'brain.head.profile',
 ];
 
 export const HABIT_TAGS = [
-  'Health', 'Fitness', 'Study', 'Work',
-  'Mindfulness', 'Creativity', 'Social', 'Finance',
+  'Health', 'Fitness', 'Mind', 'Study', 'Work', 'Social', 'Creative', 'Finance',
 ];

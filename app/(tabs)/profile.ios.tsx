@@ -1,76 +1,274 @@
 
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { IconSymbol } from "@/components/IconSymbol";
-import { GlassView } from "expo-glass-effect";
-import { useTheme } from "@react-navigation/native";
+import React from 'react';
+import { useAppTheme } from '@/contexts/ThemeContext';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Switch } from 'react-native';
+import { useRouter } from 'expo-router';
+import { spacing, typography, borderRadius, shadows } from '@/styles/commonStyles';
+import { IconSymbol } from '@/components/IconSymbol';
+import { useAuth } from '@/contexts/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  name: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold as any,
+    marginBottom: spacing.xs,
+  },
+  email: {
+    fontSize: typography.sizes.md,
+  },
+  card: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold as any,
+    marginBottom: spacing.md,
+  },
+  themeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  themeOption: {
+    flex: 1,
+    minWidth: '45%',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  themeName: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    marginTop: spacing.xs,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  menuItemText: {
+    fontSize: typography.sizes.md,
+  },
+  signOutButton: {
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.lg,
+  },
+  signOutText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold as any,
+  },
+});
 
 export default function ProfileScreen() {
-  const theme = useTheme();
+  const { user, signOut } = useAuth();
+  const { currentTheme, setTheme, themes } = useAppTheme();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => signOut(),
+      },
+    ]);
+  };
+
+  const handleSignIn = () => {
+    router.push('/auth/sign-in');
+  };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: currentTheme.colors.background }]}
+      edges={['top']}
+    >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <GlassView style={styles.profileHeader} glassEffectStyle="regular">
-          <IconSymbol ios_icon_name="person.circle.fill" android_material_icon_name="person" size={24} color={theme.colors.primary} />
-          <Text style={[styles.name, { color: theme.colors.text }]}>John Doe</Text>
-          <Text style={[styles.email, { color: theme.dark ? '#98989D' : '#666' }]}>john.doe@example.com</Text>
-        </GlassView>
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
+          <View style={[styles.avatar, { backgroundColor: currentTheme.colors.primary }]}>
+            <IconSymbol
+              ios_icon_name="person.fill"
+              android_material_icon_name="person"
+              size={40}
+              color="#FFFFFF"
+            />
+          </View>
+          <Text style={[styles.name, { color: currentTheme.colors.text }]}>
+            {user?.email?.split('@')[0] || 'Guest'}
+          </Text>
+          <Text style={[styles.email, { color: currentTheme.colors.textSecondary }]}>
+            {user?.email || 'Not signed in'}
+          </Text>
+        </Animated.View>
 
-        <GlassView style={styles.section} glassEffectStyle="regular">
-          <View style={styles.infoRow}>
-            <IconSymbol ios_icon_name="phone.fill" android_material_icon_name="phone" size={24} color={theme.dark ? '#98989D' : '#666'} />
-            <Text style={[styles.infoText, { color: theme.colors.text }]}>+1 (555) 123-4567</Text>
+        <Animated.View
+          entering={FadeInDown.delay(200)}
+          style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}
+        >
+          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
+            Theme
+          </Text>
+          <View style={styles.themeGrid}>
+            {themes.map((theme, index) => (
+              <Pressable
+                key={theme.id}
+                style={[
+                  styles.themeOption,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor:
+                      currentTheme.id === theme.id
+                        ? currentTheme.colors.primary
+                        : currentTheme.colors.border,
+                  },
+                ]}
+                onPress={() => setTheme(theme.id)}
+              >
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: theme.colors.primary,
+                  }}
+                />
+                <Text style={[styles.themeName, { color: theme.colors.text }]}>
+                  {theme.name}
+                </Text>
+              </Pressable>
+            ))}
           </View>
-          <View style={styles.infoRow}>
-            <IconSymbol ios_icon_name="location.fill" android_material_icon_name="location-on" size={24} color={theme.dark ? '#98989D' : '#666'} />
-            <Text style={[styles.infoText, { color: theme.colors.text }]}>San Francisco, CA</Text>
-          </View>
-        </GlassView>
+        </Animated.View>
+
+        <Animated.View
+          entering={FadeInDown.delay(300)}
+          style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}
+        >
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomColor: currentTheme.colors.border },
+            ]}
+          >
+            <View style={styles.menuItemLeft}>
+              <IconSymbol
+                ios_icon_name="bell.fill"
+                android_material_icon_name="notifications"
+                size={20}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text style={[styles.menuItemText, { color: currentTheme.colors.text }]}>
+                Notifications
+              </Text>
+            </View>
+            <Switch value={true} />
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomColor: currentTheme.colors.border },
+            ]}
+          >
+            <View style={styles.menuItemLeft}>
+              <IconSymbol
+                ios_icon_name="lock.fill"
+                android_material_icon_name="lock"
+                size={20}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text style={[styles.menuItemText, { color: currentTheme.colors.text }]}>
+                Privacy
+              </Text>
+            </View>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron-right"
+              size={20}
+              color={currentTheme.colors.textSecondary}
+            />
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomWidth: 0 },
+            ]}
+          >
+            <View style={styles.menuItemLeft}>
+              <IconSymbol
+                ios_icon_name="square.and.arrow.up"
+                android_material_icon_name="upload"
+                size={20}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text style={[styles.menuItemText, { color: currentTheme.colors.text }]}>
+                Export Data
+              </Text>
+            </View>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron-right"
+              size={20}
+              color={currentTheme.colors.textSecondary}
+            />
+          </Pressable>
+        </Animated.View>
+
+        {user ? (
+          <Pressable
+            style={[styles.signOutButton, { backgroundColor: currentTheme.colors.error }]}
+            onPress={handleSignOut}
+          >
+            <Text style={[styles.signOutText, { color: '#FFFFFF' }]}>Sign Out</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.signOutButton, { backgroundColor: currentTheme.colors.primary }]}
+            onPress={handleSignIn}
+          >
+            <Text style={[styles.signOutText, { color: '#FFFFFF' }]}>Sign In</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 20,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 32,
-    marginBottom: 16,
-    gap: 12,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  email: {
-    fontSize: 16,
-  },
-  section: {
-    borderRadius: 12,
-    padding: 20,
-    gap: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  infoText: {
-    fontSize: 16,
-  },
-});

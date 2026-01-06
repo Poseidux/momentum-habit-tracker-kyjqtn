@@ -2,54 +2,137 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
-import { colors } from '@/styles/commonStyles';
+
+export interface Theme {
+  id: string;
+  name: string;
+  colors: {
+    primary: string;
+    background: string;
+    surface: string;
+    text: string;
+    textSecondary: string;
+    border: string;
+    success: string;
+    warning: string;
+    error: string;
+    accent: string;
+  };
+}
+
+export const THEMES: Theme[] = [
+  {
+    id: 'zen-light',
+    name: 'Zen Light',
+    colors: {
+      primary: '#6B4EFF',
+      background: '#F8F7F4',
+      surface: '#FFFFFF',
+      text: '#1A1A1A',
+      textSecondary: '#6B6B6B',
+      border: '#E5E5E5',
+      success: '#4CAF50',
+      warning: '#FF9800',
+      error: '#F44336',
+      accent: '#6B4EFF',
+    },
+  },
+  {
+    id: 'zen-dark',
+    name: 'Zen Dark',
+    colors: {
+      primary: '#8B6EFF',
+      background: '#0A0A0A',
+      surface: '#1C1C1E',
+      text: '#FFFFFF',
+      textSecondary: '#98989D',
+      border: '#2C2C2E',
+      success: '#4CAF50',
+      warning: '#FF9800',
+      error: '#F44336',
+      accent: '#8B6EFF',
+    },
+  },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    colors: {
+      primary: '#0EA5E9',
+      background: '#F0F9FF',
+      surface: '#FFFFFF',
+      text: '#0C4A6E',
+      textSecondary: '#64748B',
+      border: '#E0F2FE',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      accent: '#0EA5E9',
+    },
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    colors: {
+      primary: '#059669',
+      background: '#F0FDF4',
+      surface: '#FFFFFF',
+      text: '#064E3B',
+      textSecondary: '#6B7280',
+      border: '#D1FAE5',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      accent: '#059669',
+    },
+  },
+];
 
 interface ThemeContextType {
-  isDark: boolean;
-  colors: typeof colors.light;
-  toggleTheme: () => void;
+  currentTheme: Theme;
+  setTheme: (themeId: string) => void;
+  themes: Theme[];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
+  const [currentTheme, setCurrentTheme] = useState<Theme>(
+    systemColorScheme === 'dark' ? THEMES[1] : THEMES[0]
+  );
 
   useEffect(() => {
-    loadThemePreference();
+    loadTheme();
   }, []);
 
-  useEffect(() => {
-    // Follow system theme by default
-    setIsDark(systemColorScheme === 'dark');
-  }, [systemColorScheme]);
-
-  const loadThemePreference = async () => {
+  const loadTheme = async () => {
     try {
-      const savedTheme = await AsyncStorage.getItem('theme_preference');
-      if (savedTheme) {
-        setIsDark(savedTheme === 'dark');
+      const savedThemeId = await AsyncStorage.getItem('app_theme');
+      if (savedThemeId) {
+        const theme = THEMES.find((t) => t.id === savedThemeId);
+        if (theme) {
+          setCurrentTheme(theme);
+        }
       }
     } catch (error) {
-      console.error('Error loading theme preference:', error);
+      console.error('Failed to load theme:', error);
     }
   };
 
-  const toggleTheme = async () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    try {
-      await AsyncStorage.setItem('theme_preference', newTheme ? 'dark' : 'light');
-    } catch (error) {
-      console.error('Error saving theme preference:', error);
+  const setTheme = async (themeId: string) => {
+    const theme = THEMES.find((t) => t.id === themeId);
+    if (theme) {
+      setCurrentTheme(theme);
+      try {
+        await AsyncStorage.setItem('app_theme', themeId);
+      } catch (error) {
+        console.error('Failed to save theme:', error);
+      }
     }
   };
-
-  const themeColors = isDark ? colors.dark : colors.light;
 
   return (
-    <ThemeContext.Provider value={{ isDark, colors: themeColors, toggleTheme }}>
+    <ThemeContext.Provider value={{ currentTheme, setTheme, themes: THEMES }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -58,13 +141,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useAppTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
-    // Return default light theme if context not available
-    console.log('ThemeContext not available, returning default theme');
-    return {
-      isDark: false,
-      colors: colors.light,
-      toggleTheme: () => {},
-    };
+    throw new Error('useAppTheme must be used within ThemeProvider');
   }
   return context;
 }

@@ -1,317 +1,274 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Switch } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
 import { useAppTheme } from '@/contexts/ThemeContext';
-import { IconSymbol } from '@/components/IconSymbol';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Switch } from 'react-native';
+import { useRouter } from 'expo-router';
 import { spacing, typography, borderRadius, shadows } from '@/styles/commonStyles';
-
-export default function ProfileScreen() {
-  const { isDark, colors, toggleTheme } = useAppTheme();
-  const router = useRouter();
-  const { user, signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      Alert.alert('Success', 'Signed out successfully');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      Alert.alert('Error', 'Failed to sign out');
-    }
-  };
-
-  const handleSignIn = () => {
-    router.push('/auth');
-  };
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
-        </View>
-
-        {/* User Profile */}
-        {user ? (
-          <Animated.View entering={FadeInDown.delay(100)} style={[styles.card, { backgroundColor: colors.surface }]}>
-            <View style={[styles.avatar, { backgroundColor: colors.accent }]}>
-              <Text style={styles.avatarText}>{user.name?.[0] || user.email[0].toUpperCase()}</Text>
-            </View>
-            <Text style={[styles.userName, { color: colors.text }]}>{user.name || 'User'}</Text>
-            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user.email}</Text>
-            {user.isPremium && (
-              <View style={[styles.premiumBadge, { backgroundColor: colors.accent + '20' }]}>
-                <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={14} color={colors.accent} />
-                <Text style={[styles.premiumText, { color: colors.accent }]}>Premium</Text>
-              </View>
-            )}
-          </Animated.View>
-        ) : (
-          <Animated.View entering={FadeInDown.delay(100)}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.signInButton,
-                { backgroundColor: colors.accent },
-                pressed && { opacity: 0.9 },
-              ]}
-              onPress={handleSignIn}
-            >
-              <Text style={styles.signInButtonText}>Sign In</Text>
-            </Pressable>
-          </Animated.View>
-        )}
-
-        {/* Appearance */}
-        <Animated.View entering={FadeInDown.delay(150)}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
-          <View style={[styles.settingCard, { backgroundColor: colors.surface }]}>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={[styles.settingIcon, { backgroundColor: colors.accent + '20' }]}>
-                  <IconSymbol 
-                    ios_icon_name={isDark ? 'moon.fill' : 'sun.max.fill'} 
-                    android_material_icon_name={isDark ? 'nightlight' : 'wb-sunny'} 
-                    size={20} 
-                    color={colors.accent} 
-                  />
-                </View>
-                <View style={styles.settingInfo}>
-                  <Text style={[styles.settingTitle, { color: colors.text }]}>Dark Mode</Text>
-                  <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
-                    {isDark ? 'Enabled' : 'Disabled'}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={isDark}
-                onValueChange={toggleTheme}
-                trackColor={{ false: colors.border, true: colors.accent + '40' }}
-                thumbColor={isDark ? colors.accent : colors.surface}
-              />
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Account */}
-        {user && (
-          <Animated.View entering={FadeInDown.delay(200)}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
-            <View style={[styles.settingCard, { backgroundColor: colors.surface }]}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.settingRow,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => {}}
-              >
-                <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: colors.accent + '20' }]}>
-                    <IconSymbol ios_icon_name="bell.fill" android_material_icon_name="notifications" size={20} color={colors.accent} />
-                  </View>
-                  <View style={styles.settingInfo}>
-                    <Text style={[styles.settingTitle, { color: colors.text }]}>Notifications</Text>
-                    <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
-                      Manage reminders
-                    </Text>
-                  </View>
-                </View>
-                <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={20} color={colors.textTertiary} />
-              </Pressable>
-
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.settingRow,
-                  pressed && { opacity: 0.7 },
-                ]}
-                onPress={() => {}}
-              >
-                <View style={styles.settingLeft}>
-                  <View style={[styles.settingIcon, { backgroundColor: colors.accent + '20' }]}>
-                    <IconSymbol ios_icon_name="arrow.down.doc.fill" android_material_icon_name="download" size={20} color={colors.accent} />
-                  </View>
-                  <View style={styles.settingInfo}>
-                    <Text style={[styles.settingTitle, { color: colors.text }]}>Export Data</Text>
-                    <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>
-                      Download your data
-                    </Text>
-                  </View>
-                </View>
-                <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={20} color={colors.textTertiary} />
-              </Pressable>
-            </View>
-          </Animated.View>
-        )}
-
-        {/* Sign Out */}
-        {user && (
-          <Animated.View entering={FadeInDown.delay(250)}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.signOutButton,
-                { backgroundColor: colors.error + '15', borderColor: colors.error },
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={handleSignOut}
-            >
-              <IconSymbol ios_icon_name="arrow.right.square" android_material_icon_name="logout" size={20} color={colors.error} />
-              <Text style={[styles.signOutButtonText, { color: colors.error }]}>Sign Out</Text>
-            </Pressable>
-          </Animated.View>
-        )}
-
-        {/* Bottom padding */}
-        <View style={{ height: 120 }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+import { IconSymbol } from '@/components/IconSymbol';
+import { useAuth } from '@/contexts/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  
-  // Header
-  header: {
-    marginBottom: spacing.lg,
-  },
-  title: {
-    ...typography.title,
-  },
-  
-  // User Card
-  card: {
     padding: spacing.lg,
-    borderRadius: borderRadius.lg,
+  },
+  header: {
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    ...shadows.sm,
+    marginBottom: spacing.xl,
   },
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: borderRadius.full,
+    borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
   },
-  avatarText: {
-    ...typography.display,
-    fontSize: 32,
-    color: '#FFFFFF',
-  },
-  userName: {
-    ...typography.section,
+  name: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold as any,
     marginBottom: spacing.xs,
   },
-  userEmail: {
-    ...typography.body,
-    marginBottom: spacing.sm,
+  email: {
+    fontSize: typography.sizes.md,
   },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  premiumText: {
-    ...typography.caption,
-    fontWeight: '600',
-  },
-  
-  // Sign In Button
-  signInButton: {
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    ...shadows.md,
-  },
-  signInButtonText: {
-    ...typography.label,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  
-  // Section
-  sectionTitle: {
-    ...typography.section,
-    marginBottom: spacing.md,
-  },
-  
-  // Setting Card
-  settingCard: {
+  card: {
     borderRadius: borderRadius.lg,
-    padding: spacing.xs,
-    marginBottom: spacing.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     ...shadows.sm,
   },
-  settingRow: {
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold as any,
+    marginBottom: spacing.md,
+  },
+  themeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  themeOption: {
+    flex: 1,
+    minWidth: '45%',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    alignItems: 'center',
+  },
+  themeName: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    marginTop: spacing.xs,
+  },
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
   },
-  settingLeft: {
+  menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
     gap: spacing.md,
   },
-  settingIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+  menuItemText: {
+    fontSize: typography.sizes.md,
   },
-  settingInfo: {
-    flex: 1,
-  },
-  settingTitle: {
-    ...typography.label,
-    marginBottom: spacing.xs,
-  },
-  settingSubtitle: {
-    ...typography.caption,
-  },
-  divider: {
-    height: 1,
-    marginHorizontal: spacing.md,
-  },
-  
-  // Sign Out Button
   signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    borderWidth: 1,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.lg,
   },
-  signOutButtonText: {
-    ...typography.label,
-    fontWeight: '600',
+  signOutText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold as any,
   },
 });
+
+export default function ProfileScreen() {
+  const { user, signOut } = useAuth();
+  const { currentTheme, setTheme, themes } = useAppTheme();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => signOut(),
+      },
+    ]);
+  };
+
+  const handleSignIn = () => {
+    router.push('/auth/sign-in');
+  };
+
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: currentTheme.colors.background }]}
+      edges={['top']}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.header}>
+          <View style={[styles.avatar, { backgroundColor: currentTheme.colors.primary }]}>
+            <IconSymbol
+              ios_icon_name="person.fill"
+              android_material_icon_name="person"
+              size={40}
+              color="#FFFFFF"
+            />
+          </View>
+          <Text style={[styles.name, { color: currentTheme.colors.text }]}>
+            {user?.email?.split('@')[0] || 'Guest'}
+          </Text>
+          <Text style={[styles.email, { color: currentTheme.colors.textSecondary }]}>
+            {user?.email || 'Not signed in'}
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          entering={FadeInDown.delay(200)}
+          style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}
+        >
+          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>
+            Theme
+          </Text>
+          <View style={styles.themeGrid}>
+            {themes.map((theme, index) => (
+              <Pressable
+                key={theme.id}
+                style={[
+                  styles.themeOption,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor:
+                      currentTheme.id === theme.id
+                        ? currentTheme.colors.primary
+                        : currentTheme.colors.border,
+                  },
+                ]}
+                onPress={() => setTheme(theme.id)}
+              >
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: theme.colors.primary,
+                  }}
+                />
+                <Text style={[styles.themeName, { color: theme.colors.text }]}>
+                  {theme.name}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
+
+        <Animated.View
+          entering={FadeInDown.delay(300)}
+          style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}
+        >
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomColor: currentTheme.colors.border },
+            ]}
+          >
+            <View style={styles.menuItemLeft}>
+              <IconSymbol
+                ios_icon_name="bell.fill"
+                android_material_icon_name="notifications"
+                size={20}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text style={[styles.menuItemText, { color: currentTheme.colors.text }]}>
+                Notifications
+              </Text>
+            </View>
+            <Switch value={true} />
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomColor: currentTheme.colors.border },
+            ]}
+          >
+            <View style={styles.menuItemLeft}>
+              <IconSymbol
+                ios_icon_name="lock.fill"
+                android_material_icon_name="lock"
+                size={20}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text style={[styles.menuItemText, { color: currentTheme.colors.text }]}>
+                Privacy
+              </Text>
+            </View>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron-right"
+              size={20}
+              color={currentTheme.colors.textSecondary}
+            />
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomWidth: 0 },
+            ]}
+          >
+            <View style={styles.menuItemLeft}>
+              <IconSymbol
+                ios_icon_name="square.and.arrow.up"
+                android_material_icon_name="upload"
+                size={20}
+                color={currentTheme.colors.textSecondary}
+              />
+              <Text style={[styles.menuItemText, { color: currentTheme.colors.text }]}>
+                Export Data
+              </Text>
+            </View>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron-right"
+              size={20}
+              color={currentTheme.colors.textSecondary}
+            />
+          </Pressable>
+        </Animated.View>
+
+        {user ? (
+          <Pressable
+            style={[styles.signOutButton, { backgroundColor: currentTheme.colors.error }]}
+            onPress={handleSignOut}
+          >
+            <Text style={[styles.signOutText, { color: '#FFFFFF' }]}>Sign Out</Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={[styles.signOutButton, { backgroundColor: currentTheme.colors.primary }]}
+            onPress={handleSignIn}
+          >
+            <Text style={[styles.signOutText, { color: '#FFFFFF' }]}>Sign In</Text>
+          </Pressable>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
