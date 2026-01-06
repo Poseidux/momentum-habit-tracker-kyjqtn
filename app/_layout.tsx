@@ -33,9 +33,16 @@ export default function RootLayout() {
         <ThemeProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="onboarding" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="add-habit" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="check-in/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="habit/[id]" />
+              <Stack.Screen name="habit-groups" />
               <Stack.Screen name="auth" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="auth/sign-in" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="auth/sign-up" options={{ presentation: 'modal' }} />
             </Stack>
           </GestureHandlerRootView>
         </ThemeProvider>

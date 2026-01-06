@@ -126,6 +126,9 @@ export function useHabits() {
       const checkIns = stored ? JSON.parse(stored) : [];
       checkIns.push(checkIn);
       await AsyncStorage.setItem(CHECKINS_KEY, JSON.stringify(checkIns));
+      
+      // Update last check-in date
+      await AsyncStorage.setItem('last_check_in_date', new Date().toISOString().split('T')[0]);
     } catch (error) {
       console.error('Error checking in habit:', error);
       throw error;
@@ -184,6 +187,7 @@ export function useUserStats() {
     level: 1,
     currentStreak: 0,
     totalHabits: 0,
+    xp: 0,
   });
   const { user } = useAuth();
 
@@ -199,8 +203,22 @@ export function useUserStats() {
         if (response.ok) {
           const data = await response.json();
           setStats(data.stats || stats);
+          return;
         }
       }
+
+      // Load local stats
+      const xpStored = await AsyncStorage.getItem('user_xp');
+      const xp = xpStored ? parseInt(xpStored, 10) : 0;
+      const level = Math.floor(xp / 100) + 1;
+
+      setStats({
+        totalXP: xp,
+        level,
+        currentStreak: 0,
+        totalHabits: 0,
+        xp,
+      });
     } catch (error) {
       console.error('Error refreshing stats:', error);
     }
