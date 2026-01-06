@@ -108,40 +108,41 @@ export default function ProfileScreen() {
           </Text>
           
           <View style={styles.themesGrid}>
-            {THEMES.map((theme) => (
-              <TouchableOpacity
-                key={theme.id}
-                style={[
-                  styles.themeCard,
-                  { backgroundColor: currentTheme.card },
-                  currentTheme.id === theme.id && { 
-                    borderWidth: 2, 
-                    borderColor: currentTheme.primary 
-                  }
-                ]}
-                onPress={() => handleThemeSelect(theme.id)}
-                activeOpacity={0.7}
-              >
-                <LinearGradient
-                  colors={[theme.primary, theme.secondary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.themePreview}
-                />
-                <Text style={[styles.themeName, { color: currentTheme.text }]}>
-                  {theme.name}
-                </Text>
-                {currentTheme.id === theme.id && (
-                  <View style={[styles.activeIndicator, { backgroundColor: currentTheme.primary }]}>
-                    <IconSymbol 
-                      ios_icon_name="checkmark" 
-                      android_material_icon_name="check" 
-                      size={12} 
-                      color="#FFFFFF" 
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
+            {THEMES.map((theme, index) => (
+              <React.Fragment key={theme.id}>
+                <TouchableOpacity
+                  style={[
+                    styles.themeCard,
+                    { backgroundColor: currentTheme.card },
+                    currentTheme.id === theme.id && { 
+                      borderWidth: 2, 
+                      borderColor: currentTheme.primary 
+                    }
+                  ]}
+                  onPress={() => handleThemeSelect(theme.id)}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={[theme.primary, theme.secondary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.themePreview}
+                  />
+                  <Text style={[styles.themeName, { color: currentTheme.text }]}>
+                    {theme.name}
+                  </Text>
+                  {currentTheme.id === theme.id && (
+                    <View style={[styles.activeIndicator, { backgroundColor: currentTheme.primary }]}>
+                      <IconSymbol 
+                        ios_icon_name="checkmark" 
+                        android_material_icon_name="check" 
+                        size={12} 
+                        color="#FFFFFF" 
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </React.Fragment>
             ))}
           </View>
         </View>
