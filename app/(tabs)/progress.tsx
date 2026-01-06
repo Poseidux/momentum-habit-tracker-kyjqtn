@@ -1,12 +1,12 @@
 
-import { useAppTheme } from '@/contexts/ThemeContext';
-import { View, Text, StyleSheet, ScrollView, Platform, Dimensions } from 'react-native';
-import { useHabits, useUserStats, useTodayCheckIns } from '@/hooks/useHabits';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAppTheme } from '@/contexts/ThemeContext';
+import { useHabits, useUserStats } from '@/hooks/useHabits';
 import { IconSymbol } from '@/components/IconSymbol';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo, useState, useEffect } from 'react';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { spacing, typography, borderRadius, shadows } from '@/styles/commonStyles';
 
 const CELL_SIZE = 12;
 
@@ -27,7 +27,7 @@ const generateHeatmapData = (habits: any[]) => {
 export default function ProgressScreen() {
   const { habits } = useHabits();
   const [heatmapData, setHeatmapData] = useState<{ [key: string]: number }>({});
-  const { currentTheme } = useAppTheme();
+  const { isDark, colors } = useAppTheme();
   const stats = useUserStats();
 
   useEffect(() => {
@@ -35,80 +35,60 @@ export default function ProgressScreen() {
   }, [habits]);
 
   const getHeatmapColor = (intensity: number) => {
-    if (intensity === 0) return currentTheme.colors.surface;
-    const colors = [
-      currentTheme.colors.primary + '30',
-      currentTheme.colors.primary + '50',
-      currentTheme.colors.primary + '70',
-      currentTheme.colors.primary + '90',
-      currentTheme.colors.primary,
-    ];
-    return colors[Math.min(intensity - 1, 4)];
+    if (intensity === 0) return colors.progressBg;
+    const opacities = ['20', '40', '60', '80', 'FF'];
+    return colors.accent + opacities[Math.min(intensity - 1, 4)];
   };
 
   const totalHabits = habits.length;
-  const completedToday = habits.filter(h => h.streak && h.streak > 0).length;
-  const completionRate = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0;
+  const activeHabits = habits.filter(h => h.currentStreak > 0).length;
+  const totalCheckIns = habits.reduce((sum, h) => sum + (h.totalCheckIns || 0), 0);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]} edges={['top']}>
-      <LinearGradient
-        colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.headerTitle}>Progress</Text>
-        <Text style={styles.headerSubtitle}>Track your journey</Text>
-      </LinearGradient>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Your journey at a glance</Text>
+        </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Stats Cards */}
-        <View style={styles.statsRow}>
-          <Animated.View entering={FadeInDown.delay(100)} style={[styles.statCard, { backgroundColor: currentTheme.colors.surface }]}>
-            <LinearGradient
-              colors={[currentTheme.colors.primary + '30', currentTheme.colors.primary + '10']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.statIconContainer}
-            >
-              <IconSymbol ios_icon_name="flame.fill" android_material_icon_name="local-fire-department" size={28} color={currentTheme.colors.primary} />
-            </LinearGradient>
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{stats.level}</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Level</Text>
+        {/* Weekly Summary Cards */}
+        <View style={styles.statsGrid}>
+          <Animated.View entering={FadeInDown.delay(100)} style={[styles.statCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.statIcon, { backgroundColor: colors.accent + '20' }]}>
+              <IconSymbol ios_icon_name="chart.bar.fill" android_material_icon_name="bar-chart" size={24} color={colors.accent} />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{totalHabits}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Habits</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(200)} style={[styles.statCard, { backgroundColor: currentTheme.colors.surface }]}>
-            <LinearGradient
-              colors={[currentTheme.colors.secondary + '30', currentTheme.colors.secondary + '10']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.statIconContainer}
-            >
-              <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={28} color={currentTheme.colors.secondary} />
-            </LinearGradient>
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{stats.xp}</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>XP</Text>
+          <Animated.View entering={FadeInDown.delay(150)} style={[styles.statCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.statIcon, { backgroundColor: colors.success + '20' }]}>
+              <IconSymbol ios_icon_name="checkmark.circle.fill" android_material_icon_name="check-circle" size={24} color={colors.success} />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{activeHabits}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Active Streaks</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(300)} style={[styles.statCard, { backgroundColor: currentTheme.colors.surface }]}>
-            <LinearGradient
-              colors={[currentTheme.colors.success + '30', currentTheme.colors.success + '10']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.statIconContainer}
-            >
-              <IconSymbol ios_icon_name="checkmark.circle.fill" android_material_icon_name="check-circle" size={28} color={currentTheme.colors.success} />
-            </LinearGradient>
-            <Text style={[styles.statValue, { color: currentTheme.colors.text }]}>{completionRate}%</Text>
-            <Text style={[styles.statLabel, { color: currentTheme.colors.textSecondary }]}>Today</Text>
+          <Animated.View entering={FadeInDown.delay(200)} style={[styles.statCard, { backgroundColor: colors.surface }]}>
+            <View style={[styles.statIcon, { backgroundColor: colors.warning + '20' }]}>
+              <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={24} color={colors.warning} />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>{totalCheckIns}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Check-ins</Text>
           </Animated.View>
         </View>
 
-        {/* Activity Heatmap */}
-        <Animated.View entering={FadeInDown.delay(400)} style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.text }]}>Activity</Text>
-          <Text style={[styles.cardSubtitle, { color: currentTheme.colors.textSecondary }]}>Last 90 days</Text>
+        {/* Heatmap */}
+        <Animated.View entering={FadeInDown.delay(250)} style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Activity</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>Last 90 days</Text>
+          
           <View style={styles.heatmapContainer}>
             <View style={styles.heatmapGrid}>
               {Object.entries(heatmapData).slice(0, 84).map(([date, intensity], index) => (
@@ -121,8 +101,9 @@ export default function ProgressScreen() {
                 />
               ))}
             </View>
+            
             <View style={styles.heatmapLegend}>
-              <Text style={[styles.legendText, { color: currentTheme.colors.textSecondary }]}>Less</Text>
+              <Text style={[styles.legendText, { color: colors.textTertiary }]}>Less</Text>
               {[0, 1, 2, 3, 4].map((intensity, index) => (
                 <View
                   key={`legend-${index}`}
@@ -132,58 +113,62 @@ export default function ProgressScreen() {
                   ]}
                 />
               ))}
-              <Text style={[styles.legendText, { color: currentTheme.colors.textSecondary }]}>More</Text>
+              <Text style={[styles.legendText, { color: colors.textTertiary }]}>More</Text>
             </View>
           </View>
         </Animated.View>
 
         {/* Habits List */}
-        <Animated.View entering={FadeInDown.delay(500)} style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: currentTheme.colors.text }]}>Your Habits</Text>
+        <Animated.View entering={FadeInDown.delay(300)} style={[styles.card, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>Your Habits</Text>
+          
           {habits.length === 0 ? (
             <View style={styles.emptyState}>
-              <IconSymbol ios_icon_name="tray" android_material_icon_name="inbox" size={48} color={currentTheme.colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: currentTheme.colors.textSecondary }]}>No habits yet</Text>
+              <IconSymbol ios_icon_name="tray" android_material_icon_name="inbox" size={48} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No habits yet</Text>
             </View>
           ) : (
             habits.map((habit, index) => (
               <React.Fragment key={`habit-${index}`}>
                 <View style={styles.habitItem}>
                   <View style={styles.habitLeft}>
-                    <View style={[styles.habitIconContainer, { backgroundColor: habit.color + '20' }]}>
+                    <View style={[styles.habitIconContainer, { backgroundColor: colors.accent + '20' }]}>
                       <IconSymbol
                         ios_icon_name={habit.icon || 'checkmark.circle'}
                         android_material_icon_name="check-circle"
                         size={20}
-                        color={habit.color}
+                        color={colors.accent}
                       />
                     </View>
                     <View style={styles.habitInfo}>
-                      <Text style={[styles.habitTitle, { color: currentTheme.colors.text }]}>{habit.title}</Text>
-                      {habit.streak && habit.streak > 0 && (
+                      <Text style={[styles.habitTitle, { color: colors.text }]}>{habit.name}</Text>
+                      {habit.currentStreak > 0 && (
                         <View style={styles.streakBadge}>
-                          <IconSymbol ios_icon_name="flame.fill" android_material_icon_name="local-fire-department" size={12} color="#F59E0B" />
-                          <Text style={styles.streakText}>{habit.streak} day streak</Text>
+                          <IconSymbol ios_icon_name="flame.fill" android_material_icon_name="local-fire-department" size={12} color={colors.warning} />
+                          <Text style={[styles.streakText, { color: colors.textSecondary }]}>{habit.currentStreak} day streak</Text>
                         </View>
                       )}
                     </View>
                   </View>
                   <View style={styles.habitStats}>
-                    <Text style={[styles.habitStatValue, { color: currentTheme.colors.text }]}>
+                    <Text style={[styles.habitStatValue, { color: colors.text }]}>
                       {habit.totalCheckIns || 0}
                     </Text>
-                    <Text style={[styles.habitStatLabel, { color: currentTheme.colors.textSecondary }]}>
+                    <Text style={[styles.habitStatLabel, { color: colors.textSecondary }]}>
                       check-ins
                     </Text>
                   </View>
                 </View>
                 {index < habits.length - 1 && (
-                  <View style={[styles.divider, { backgroundColor: currentTheme.colors.background }]} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 )}
               </React.Fragment>
             ))
           )}
         </Animated.View>
+
+        {/* Bottom padding for tab bar */}
+        <View style={{ height: 120 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -193,87 +178,80 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-  },
   scrollView: {
     flex: 1,
   },
-  content: {
-    padding: 16,
-    paddingBottom: 100,
-    gap: 16,
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
   },
-  statsRow: {
+  
+  // Header
+  header: {
+    marginBottom: spacing.lg,
+  },
+  title: {
+    ...typography.title,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    ...typography.caption,
+  },
+  
+  // Stats Grid
+  statsGrid: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   statCard: {
     flex: 1,
-    borderRadius: 20,
-    padding: 16,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...shadows.sm,
   },
-  statIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    ...typography.section,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    ...typography.caption,
   },
+  
+  // Card
   card: {
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+    ...shadows.sm,
   },
   cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    ...typography.section,
+    marginBottom: spacing.xs,
   },
   cardSubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
+    ...typography.caption,
+    marginBottom: spacing.md,
   },
+  
+  // Heatmap
   heatmapContainer: {
-    gap: 12,
+    gap: spacing.md,
   },
   heatmapGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: spacing.xs,
   },
   heatmapCell: {
     width: CELL_SIZE,
@@ -283,40 +261,44 @@ const styles = StyleSheet.create({
   heatmapLegend: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   legendText: {
-    fontSize: 11,
+    ...typography.micro,
   },
   legendCell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
     borderRadius: 2,
   },
+  
+  // Empty State
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 32,
-    gap: 12,
+    paddingVertical: spacing.xl,
+    gap: spacing.sm,
   },
   emptyText: {
-    fontSize: 14,
+    ...typography.body,
   },
+  
+  // Habit Item
   habitItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
   habitLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 12,
+    gap: spacing.md,
   },
   habitIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -324,32 +306,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   habitTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
+    ...typography.label,
+    marginBottom: spacing.xs,
   },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   streakText: {
-    fontSize: 11,
-    color: '#F59E0B',
-    fontWeight: '500',
+    ...typography.caption,
   },
   habitStats: {
     alignItems: 'flex-end',
   },
   habitStatValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.label,
+    fontWeight: '600',
   },
   habitStatLabel: {
-    fontSize: 11,
+    ...typography.micro,
   },
   divider: {
     height: 1,
-    marginVertical: 4,
   },
 });

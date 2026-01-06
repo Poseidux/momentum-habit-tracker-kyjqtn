@@ -1,159 +1,260 @@
 
 import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
-// Momentum color palette - vibrant and motivating
+// Zen Minimal + Premium Calm Design System
+// Neutral palette with warm grays/cream + single accent color
+
 export const colors = {
-  primary: '#6366F1',      // Indigo - main brand color
-  primaryDark: '#4F46E5',  // Darker indigo for pressed states
-  secondary: '#8B5CF6',    // Purple - secondary actions
-  accent: '#EC4899',       // Pink - highlights and celebrations
-  success: '#10B981',      // Green - completed habits
-  warning: '#F59E0B',      // Amber - warnings
-  danger: '#EF4444',       // Red - delete actions
+  // Light Mode - Warm Neutrals
+  light: {
+    // Backgrounds
+    background: '#FAFAF9',        // Warm off-white
+    surface: '#FFFFFF',           // Pure white cards
+    surfaceElevated: '#FFFFFF',   // Elevated surfaces
+    
+    // Text
+    text: '#1C1917',              // Deep warm gray
+    textSecondary: '#78716C',     // Medium warm gray
+    textTertiary: '#A8A29E',      // Light warm gray
+    
+    // Accent - Used sparingly for progress + primary actions
+    accent: '#6366F1',            // Calm indigo
+    accentLight: '#818CF8',       // Lighter accent
+    accentDark: '#4F46E5',        // Darker accent
+    
+    // Semantic
+    success: '#10B981',           // Calm green
+    warning: '#F59E0B',           // Warm amber
+    error: '#EF4444',             // Soft red
+    
+    // Borders & Dividers
+    border: '#E7E5E4',            // Hairline warm gray
+    divider: '#F5F5F4',           // Subtle divider
+    
+    // Progress & Completion
+    progressBg: '#F5F5F4',        // Light neutral
+    progressFill: '#6366F1',      // Accent color
+  },
   
-  // Backgrounds
-  background: '#F8FAFC',
-  backgroundDark: '#0F172A',
-  backgroundAlt: '#FFFFFF',
-  backgroundAltDark: '#1E293B',
-  
-  // Cards
-  card: '#FFFFFF',
-  cardDark: '#1E293B',
-  cardBorder: '#E2E8F0',
-  cardBorderDark: '#334155',
-  
-  // Text
-  text: '#1E293B',
-  textDark: '#F1F5F9',
-  textSecondary: '#64748B',
-  textSecondaryDark: '#94A3B8',
-  
-  // UI Elements
-  border: '#E2E8F0',
-  borderDark: '#334155',
-  divider: '#F1F5F9',
-  dividerDark: '#334155',
-  surface: '#F1F5F9',
-  
-  // Habit strength colors
-  strengthWeak: '#EF4444',
-  strengthMedium: '#F59E0B',
-  strengthStrong: '#10B981',
-  
-  // XP and gamification
-  xpGold: '#FBBF24',
-  levelBadge: '#8B5CF6',
-  
-  // Streak colors
-  streakGold: '#F59E0B',
-  streakSilver: '#94A3B8',
-  
-  // Error state
-  error: '#EF4444',
+  // Dark Mode - Deep Neutrals
+  dark: {
+    // Backgrounds
+    background: '#0C0A09',        // Deep warm black
+    surface: '#1C1917',           // Dark warm gray
+    surfaceElevated: '#292524',   // Elevated dark surface
+    
+    // Text
+    text: '#FAFAF9',              // Warm white
+    textSecondary: '#A8A29E',     // Medium warm gray
+    textTertiary: '#78716C',      // Darker warm gray
+    
+    // Accent - Same as light mode for consistency
+    accent: '#818CF8',            // Slightly lighter for dark mode
+    accentLight: '#A5B4FC',       // Lighter accent
+    accentDark: '#6366F1',        // Darker accent
+    
+    // Semantic
+    success: '#34D399',           // Brighter green for dark
+    warning: '#FBBF24',           // Brighter amber for dark
+    error: '#F87171',             // Softer red for dark
+    
+    // Borders & Dividers
+    border: '#292524',            // Subtle border
+    divider: '#1C1917',           // Subtle divider
+    
+    // Progress & Completion
+    progressBg: '#292524',        // Dark neutral
+    progressFill: '#818CF8',      // Accent color
+  },
 };
 
-export const buttonStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondary: {
-    backgroundColor: colors.backgroundAlt,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  danger: {
-    backgroundColor: colors.danger,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+// 8pt spacing grid
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+  xxl: 48,
+};
 
-export const commonStyles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: colors.background,
-    width: '100%',
-    height: '100%',
+// Typography scale - Modern sans with clear hierarchy
+export const typography = {
+  // Display - Hero headers
+  display: {
+    fontSize: 40,
+    fontWeight: '700' as const,
+    lineHeight: 48,
+    letterSpacing: -0.5,
   },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    width: '100%',
-    height: '100%',
-  },
-  content: {
-    flex: 1,
-    width: '100%',
-  },
+  
+  // Title - Screen titles
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 8,
+    fontWeight: '600' as const,
+    lineHeight: 36,
+    letterSpacing: -0.3,
   },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  text: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: colors.text,
-    lineHeight: 24,
-  },
-  textSecondary: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
+  
+  // Section - Section headers
   section: {
-    width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: 24,
+    fontSize: 20,
+    fontWeight: '600' as const,
+    lineHeight: 28,
+    letterSpacing: -0.2,
   },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+  
+  // Label - Form labels, card titles
+  label: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    lineHeight: 24,
+    letterSpacing: 0,
+  },
+  
+  // Body - Regular text
+  body: {
+    fontSize: 15,
+    fontWeight: '400' as const,
+    lineHeight: 22,
+    letterSpacing: 0,
+  },
+  
+  // Caption - Small text, metadata
+  caption: {
+    fontSize: 13,
+    fontWeight: '400' as const,
+    lineHeight: 18,
+    letterSpacing: 0,
+  },
+  
+  // Micro - Tiny labels
+  micro: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    lineHeight: 16,
+    letterSpacing: 0.3,
+  },
+};
+
+// Soft shadows for subtle depth
+export const shadows = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 2,
   },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+};
+
+// Border radius - Rounded cards
+export const borderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 9999,
+};
+
+// Common component styles
+export const commonStyles = StyleSheet.create({
+  // Containers
+  container: {
+    flex: 1,
+  },
+  
+  // Cards with subtle depth
+  card: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    ...shadows.md,
+  },
+  
+  // Large touch targets (minimum 44x44)
+  touchTarget: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  // Buttons
+  primaryButton: {
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  
+  secondaryButton: {
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    borderWidth: 1,
+  },
+  
+  // Input fields
+  input: {
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
+    borderWidth: 1,
+    ...typography.body,
+  },
+  
+  // Spacing utilities
+  mb_xs: { marginBottom: spacing.xs },
+  mb_sm: { marginBottom: spacing.sm },
+  mb_md: { marginBottom: spacing.md },
+  mb_lg: { marginBottom: spacing.lg },
+  mb_xl: { marginBottom: spacing.xl },
+  
+  mt_xs: { marginTop: spacing.xs },
+  mt_sm: { marginTop: spacing.sm },
+  mt_md: { marginTop: spacing.md },
+  mt_lg: { marginTop: spacing.lg },
+  mt_xl: { marginTop: spacing.xl },
+  
+  // Layout
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  rowBetween: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  
   center: {
     alignItems: 'center',
     justifyContent: 'center',
   },
 });
+
+// Helper function to get theme colors based on color scheme
+export const getThemeColors = (isDark: boolean) => {
+  return isDark ? colors.dark : colors.light;
+};

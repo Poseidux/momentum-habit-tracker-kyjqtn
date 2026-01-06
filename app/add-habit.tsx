@@ -1,44 +1,44 @@
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import * as ImagePicker from 'expo-image-picker';
-import { useAppTheme } from '@/contexts/ThemeContext';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Platform } from 'react-native';
-import { useHabits } from '@/hooks/useHabits';
-import { HabitType, HabitSchedule, HABIT_COLORS, HABIT_ICONS, HABIT_TAGS } from '@/types/habit';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAppTheme } from '@/contexts/ThemeContext';
+import { useHabits } from '@/hooks/useHabits';
+import { HabitType, HabitSchedule, HABIT_COLORS, HABIT_ICONS, HABIT_TAGS } from '@/types/habit';
 import { IconSymbol } from '@/components/IconSymbol';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { spacing, typography, borderRadius, shadows } from '@/styles/commonStyles';
 
-const FREE_HABIT_LIMIT = 3;
+const FREE_HABIT_LIMIT = 5;
 
 export default function AddHabitScreen() {
   const { addHabit, habits } = useHabits();
   const { user } = useAuth();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const { isDark, colors } = useAppTheme();
+  const router = useRouter();
+  
+  const [name, setName] = useState('');
   const [selectedType, setSelectedType] = useState<HabitType>('yes_no');
   const [selectedSchedule, setSelectedSchedule] = useState<HabitSchedule>('daily');
   const [selectedIcon, setSelectedIcon] = useState(HABIT_ICONS[0]);
   const [selectedColor, setSelectedColor] = useState(HABIT_COLORS[0]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
-  const [scheduleCount, setScheduleCount] = useState('3');
-  const { currentTheme } = useAppTheme();
-  const router = useRouter();
+  const [timesPerWeek, setTimesPerWeek] = useState('3');
 
   const handleSave = async () => {
-    if (!title.trim()) {
+    if (!name.trim()) {
       Alert.alert('Error', 'Please enter a habit name');
       return;
     }
 
-    if (!user && habits.length >= FREE_HABIT_LIMIT) {
+    if (!user?.isPremium && habits.length >= FREE_HABIT_LIMIT) {
       Alert.alert(
         'Upgrade to Premium',
-        `Free users can create up to ${FREE_HABIT_LIMIT} habits. Sign in to unlock unlimited habits!`,
+        `Free users can create up to ${FREE_HABIT_LIMIT} habits. Upgrade to unlock unlimited habits!`,
         [{ text: 'OK' }]
       );
       return;
@@ -46,18 +46,17 @@ export default function AddHabitScreen() {
 
     try {
       await addHabit({
-        title,
-        description,
+        name,
         type: selectedType,
         schedule: selectedSchedule,
-        scheduleDays: selectedSchedule === 'specific_days' ? selectedDays : undefined,
-        scheduleCount: selectedSchedule === 'x_per_week' ? parseInt(scheduleCount) : undefined,
+        specificDays: selectedSchedule === 'specific_days' ? selectedDays : undefined,
+        timesPerWeek: selectedSchedule === 'x_per_week' ? parseInt(timesPerWeek) : undefined,
         icon: selectedIcon,
         color: selectedColor,
         tags: selectedTags,
-        createdAt: new Date().toISOString(),
       });
-      Alert.alert('Success', 'Habit created successfully!');
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
       console.error('Error creating habit:', error);
@@ -65,217 +64,241 @@ export default function AddHabitScreen() {
     }
   };
 
-  const handleCancel = () => {
-    router.back();
-  };
-
   const toggleTag = (tag: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedTags(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
   };
 
   const toggleDay = (dayIndex: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedDays(prev =>
       prev.includes(dayIndex) ? prev.filter(d => d !== dayIndex) : [...prev, dayIndex]
     );
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Stack.Screen
         options={{
-          headerShown: false,
+          headerShown: true,
+          title: 'New Habit',
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerShadowVisible: false,
         }}
       />
       
-      <LinearGradient
-        colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-            <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Habit</Text>
-          <View style={styles.backButton} />
-        </View>
-      </LinearGradient>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <Animated.View entering={FadeInDown.delay(100)} style={styles.section}>
-          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Habit Name *</Text>
+        {/* Habit Name */}
+        <Animated.View entering={FadeIn.duration(400)} style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Habit Name</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: currentTheme.colors.surface, color: currentTheme.colors.text, borderColor: currentTheme.colors.primary + '30' }]}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g., Morning Run"
-            placeholderTextColor={currentTheme.colors.textSecondary}
+            style={[
+              styles.input, 
+              { 
+                backgroundColor: colors.surface, 
+                color: colors.text, 
+                borderColor: colors.border 
+              }
+            ]}
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g., Morning meditation"
+            placeholderTextColor={colors.textTertiary}
+            autoFocus
           />
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(200)} style={styles.section}>
-          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea, { backgroundColor: currentTheme.colors.surface, color: currentTheme.colors.text, borderColor: currentTheme.colors.primary + '30' }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Add a description..."
-            placeholderTextColor={currentTheme.colors.textSecondary}
-            multiline
-            numberOfLines={3}
-          />
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(300)} style={styles.section}>
-          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Type</Text>
-          <View style={styles.optionsRow}>
+        {/* Type */}
+        <Animated.View entering={FadeInDown.delay(50).duration(500)} style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Type</Text>
+          <View style={styles.segmentedControl}>
             {(['yes_no', 'count', 'duration'] as HabitType[]).map((type, index) => (
-              <React.Fragment key={`type-${index}`}>
-                <TouchableOpacity
-                  style={[
-                    styles.optionButton,
-                    { borderColor: currentTheme.colors.primary + '30' },
-                    selectedType === type && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
-                  ]}
-                  onPress={() => setSelectedType(type)}
-                >
-                  <Text style={[styles.optionText, { color: selectedType === type ? '#FFFFFF' : currentTheme.colors.text }]}>
-                    {type === 'yes_no' ? 'Yes/No' : type === 'count' ? 'Count' : 'Duration'}
-                  </Text>
-                </TouchableOpacity>
-              </React.Fragment>
+              <Pressable
+                key={`type-${index}`}
+                style={({ pressed }) => [
+                  styles.segment,
+                  { 
+                    backgroundColor: selectedType === type ? colors.accent : colors.surface,
+                    borderColor: selectedType === type ? colors.accent : colors.border,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => {
+                  setSelectedType(type);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                <Text style={[
+                  styles.segmentText,
+                  { color: selectedType === type ? '#FFFFFF' : colors.text }
+                ]}>
+                  {type === 'yes_no' ? 'Yes/No' : type === 'count' ? 'Count' : 'Duration'}
+                </Text>
+              </Pressable>
             ))}
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(400)} style={styles.section}>
-          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Schedule</Text>
-          <View style={styles.optionsRow}>
+        {/* Schedule */}
+        <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Schedule</Text>
+          <View style={styles.segmentedControl}>
             {(['daily', 'specific_days', 'x_per_week'] as HabitSchedule[]).map((schedule, index) => (
-              <React.Fragment key={`schedule-${index}`}>
-                <TouchableOpacity
-                  style={[
-                    styles.optionButton,
-                    { borderColor: currentTheme.colors.primary + '30' },
-                    selectedSchedule === schedule && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
-                  ]}
-                  onPress={() => setSelectedSchedule(schedule)}
-                >
-                  <Text style={[styles.optionText, { color: selectedSchedule === schedule ? '#FFFFFF' : currentTheme.colors.text }]}>
-                    {schedule === 'daily' ? 'Daily' : schedule === 'specific_days' ? 'Specific Days' : 'X per Week'}
-                  </Text>
-                </TouchableOpacity>
-              </React.Fragment>
+              <Pressable
+                key={`schedule-${index}`}
+                style={({ pressed }) => [
+                  styles.segment,
+                  { 
+                    backgroundColor: selectedSchedule === schedule ? colors.accent : colors.surface,
+                    borderColor: selectedSchedule === schedule ? colors.accent : colors.border,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => {
+                  setSelectedSchedule(schedule);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                <Text style={[
+                  styles.segmentText,
+                  { color: selectedSchedule === schedule ? '#FFFFFF' : colors.text }
+                ]}>
+                  {schedule === 'daily' ? 'Daily' : schedule === 'specific_days' ? 'Days' : 'X/Week'}
+                </Text>
+              </Pressable>
             ))}
           </View>
         </Animated.View>
 
+        {/* Specific Days */}
         {selectedSchedule === 'specific_days' && (
-          <Animated.View entering={FadeInDown.delay(500)} style={styles.section}>
-            <Text style={[styles.label, { color: currentTheme.colors.text }]}>Select Days</Text>
+          <Animated.View entering={FadeInDown.delay(150).duration(500)} style={styles.section}>
+            <Text style={[styles.label, { color: colors.text }]}>Select Days</Text>
             <View style={styles.daysRow}>
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                <React.Fragment key={`day-${index}`}>
-                  <TouchableOpacity
-                    style={[
-                      styles.dayButton,
-                      { borderColor: currentTheme.colors.primary + '30' },
-                      selectedDays.includes(index) && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
-                    ]}
-                    onPress={() => toggleDay(index)}
-                  >
-                    <Text style={[styles.dayText, { color: selectedDays.includes(index) ? '#FFFFFF' : currentTheme.colors.text }]}>
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                </React.Fragment>
+                <Pressable
+                  key={`day-${index}`}
+                  style={({ pressed }) => [
+                    styles.dayButton,
+                    { 
+                      backgroundColor: selectedDays.includes(index) ? colors.accent : colors.surface,
+                      borderColor: selectedDays.includes(index) ? colors.accent : colors.border,
+                    },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => toggleDay(index)}
+                >
+                  <Text style={[
+                    styles.dayText,
+                    { color: selectedDays.includes(index) ? '#FFFFFF' : colors.text }
+                  ]}>
+                    {day}
+                  </Text>
+                </Pressable>
               ))}
             </View>
           </Animated.View>
         )}
 
+        {/* Times Per Week */}
         {selectedSchedule === 'x_per_week' && (
-          <Animated.View entering={FadeInDown.delay(500)} style={styles.section}>
-            <Text style={[styles.label, { color: currentTheme.colors.text }]}>Times per Week</Text>
+          <Animated.View entering={FadeInDown.delay(150).duration(500)} style={styles.section}>
+            <Text style={[styles.label, { color: colors.text }]}>Times per Week</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: currentTheme.colors.surface, color: currentTheme.colors.text, borderColor: currentTheme.colors.primary + '30' }]}
-              value={scheduleCount}
-              onChangeText={setScheduleCount}
+              style={[
+                styles.input, 
+                { 
+                  backgroundColor: colors.surface, 
+                  color: colors.text, 
+                  borderColor: colors.border 
+                }
+              ]}
+              value={timesPerWeek}
+              onChangeText={setTimesPerWeek}
               keyboardType="number-pad"
               placeholder="3"
-              placeholderTextColor={currentTheme.colors.textSecondary}
+              placeholderTextColor={colors.textTertiary}
             />
           </Animated.View>
         )}
 
-        <Animated.View entering={FadeInDown.delay(600)} style={styles.section}>
-          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Color</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorsScroll}>
-            {HABIT_COLORS.map((color, index) => (
-              <React.Fragment key={`color-${index}`}>
-                <TouchableOpacity
-                  style={[
-                    styles.colorButton,
-                    { backgroundColor: color },
-                    selectedColor === color && styles.colorButtonSelected
-                  ]}
-                  onPress={() => setSelectedColor(color)}
-                >
-                  {selectedColor === color && (
-                    <IconSymbol ios_icon_name="checkmark" android_material_icon_name="check" size={20} color="#FFF" />
-                  )}
-                </TouchableOpacity>
-              </React.Fragment>
-            ))}
-          </ScrollView>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(700)} style={styles.section}>
-          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Tags</Text>
+        {/* Tags */}
+        <Animated.View entering={FadeInDown.delay(200).duration(500)} style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Tags (Optional)</Text>
           <View style={styles.tagsContainer}>
             {HABIT_TAGS.map((tag, index) => (
-              <React.Fragment key={`tag-${index}`}>
-                <TouchableOpacity
-                  style={[
-                    styles.tagButton,
-                    { borderColor: currentTheme.colors.primary + '30' },
-                    selectedTags.includes(tag) && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
-                  ]}
-                  onPress={() => toggleTag(tag)}
-                >
-                  <Text style={[styles.tagText, { color: selectedTags.includes(tag) ? '#FFFFFF' : currentTheme.colors.text }]}>
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-              </React.Fragment>
+              <Pressable
+                key={`tag-${index}`}
+                style={({ pressed }) => [
+                  styles.tagButton,
+                  { 
+                    backgroundColor: selectedTags.includes(tag) ? colors.accent + '20' : colors.surface,
+                    borderColor: selectedTags.includes(tag) ? colors.accent : colors.border,
+                  },
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => toggleTag(tag)}
+              >
+                <Text style={[
+                  styles.tagButtonText,
+                  { color: selectedTags.includes(tag) ? colors.accent : colors.text }
+                ]}>
+                  {tag}
+                </Text>
+              </Pressable>
             ))}
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(800)} style={styles.buttonRow}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton, { borderColor: currentTheme.colors.error }]}
-            onPress={handleCancel}
-          >
-            <Text style={[styles.buttonText, { color: currentTheme.colors.error }]}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.saveButton]}
+        {/* Color Picker */}
+        <Animated.View entering={FadeInDown.delay(250).duration(500)} style={styles.section}>
+          <Text style={[styles.label, { color: colors.text }]}>Color (Optional)</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorsScroll}>
+            {HABIT_COLORS.map((color, index) => (
+              <Pressable
+                key={`color-${index}`}
+                style={({ pressed }) => [
+                  styles.colorButton,
+                  { backgroundColor: color },
+                  selectedColor === color && styles.colorButtonSelected,
+                  pressed && { opacity: 0.7 },
+                ]}
+                onPress={() => {
+                  setSelectedColor(color);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                {selectedColor === color && (
+                  <IconSymbol ios_icon_name="checkmark" android_material_icon_name="check" size={20} color="#FFF" />
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Animated.View>
+
+        {/* Save Button */}
+        <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.saveButton,
+              { backgroundColor: colors.accent },
+              pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+            ]}
             onPress={handleSave}
           >
-            <LinearGradient
-              colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.saveButtonGradient}
-            >
-              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Create Habit</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <Text style={styles.saveButtonText}>Create Habit</Text>
+          </Pressable>
         </Animated.View>
+
+        {/* Bottom padding */}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -285,67 +308,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 16,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   },
+  
+  // Section
   section: {
-    marginBottom: 24,
+    marginBottom: spacing.xl,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    ...typography.label,
+    marginBottom: spacing.md,
   },
+  
+  // Input
   input: {
+    ...typography.body,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 16,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  optionsRow: {
+  
+  // Segmented Control
+  segmentedControl: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
-  optionButton: {
+  segment: {
     flex: 1,
-    borderWidth: 2,
-    borderRadius: 12,
-    padding: 14,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
+    borderWidth: 1,
   },
-  optionText: {
-    fontSize: 13,
-    fontWeight: '600',
+  segmentText: {
+    ...typography.body,
+    fontWeight: '500',
   },
+  
+  // Days
   daysRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -353,81 +359,61 @@ const styles = StyleSheet.create({
   dayButton: {
     width: 44,
     height: 44,
-    borderWidth: 2,
-    borderRadius: 22,
-    justifyContent: 'center',
+    borderRadius: borderRadius.full,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   dayText: {
-    fontSize: 14,
+    ...typography.label,
     fontWeight: '600',
   },
+  
+  // Tags
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  tagButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+  },
+  tagButtonText: {
+    ...typography.caption,
+    fontWeight: '500',
+  },
+  
+  // Colors
   colorsScroll: {
     flexDirection: 'row',
   },
   colorButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-    justifyContent: 'center',
+    borderRadius: borderRadius.full,
+    marginRight: spacing.md,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: 'center',
+    ...shadows.sm,
   },
   colorButtonSelected: {
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    transform: [{ scale: 1.1 }],
   },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tagButton: {
-    borderWidth: 2,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  tagText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  button: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  cancelButton: {
-    borderWidth: 2,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  
+  // Save Button
   saveButton: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  saveButtonGradient: {
-    padding: 16,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
-    justifyContent: 'center',
+    ...shadows.md,
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
+  saveButtonText: {
+    ...typography.label,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
