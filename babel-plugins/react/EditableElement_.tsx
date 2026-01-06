@@ -1,3 +1,4 @@
+
 /* eslint-disable */
 
 // @eslint-ignore-file
@@ -56,8 +57,14 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
   const type = getType(children);
   const __sourceLocation = props.__sourceLocation;
   const __trace = props.__trace;
-  const id = __trace.join("");
+  const id = __trace?.join("") || "";
   const attributes = overwrittenProps?.[id] ?? {};
+
+  // If type is not recognized, just return the children as-is
+  // This prevents wrapping components like LinearGradient that don't need editing
+  if (!type) {
+    return children;
+  }
 
   const editStyling =
     selected === id
@@ -135,4 +142,7 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
       children: children.props.children,
     });
   }
+
+  // Fallback: return children as-is
+  return children;
 }
