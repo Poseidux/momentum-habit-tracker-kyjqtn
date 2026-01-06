@@ -6,9 +6,8 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useHabits, useUserStats, useTodayCheckIns } from '@/hooks/useHabits';
 import { useAppTheme } from '@/contexts/ThemeContext';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { authenticatedGet, isBackendConfigured } from '@/utils/api';
 
-const CELL_SIZE = (Dimensions.get('window').width - 80) / 7;
+const CELL_SIZE = 12;
 
 export default function ProgressScreen() {
   const { currentTheme } = useAppTheme();
@@ -16,251 +15,135 @@ export default function ProgressScreen() {
   const { stats } = useUserStats();
   const [heatmapData, setHeatmapData] = useState<any[]>([]);
 
+  // Provide fallback colors in case theme is not loaded
+  const backgroundColor = currentTheme?.colors?.background || '#000000';
+  const surfaceColor = currentTheme?.colors?.surface || '#1C1C1E';
+  const textColor = currentTheme?.colors?.text || '#FFFFFF';
+  const textSecondaryColor = currentTheme?.colors?.textSecondary || '#98989D';
+  const primaryColor = currentTheme?.colors?.primary || '#007AFF';
+  const successColor = currentTheme?.colors?.success || '#34C759';
+
   useEffect(() => {
-    // Generate heatmap data for the last 12 weeks
-    const weeks = [];
-    const today = new Date();
-    
-    for (let week = 11; week >= 0; week--) {
-      const weekData = [];
-      for (let day = 0; day < 7; day++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - (week * 7 + (6 - day)));
-        
-        // Random intensity for demo (0-4)
-        const intensity = Math.floor(Math.random() * 5);
-        
-        weekData.push({
-          date: date.toISOString().split('T')[0],
-          intensity,
-        });
-      }
-      weeks.push(weekData);
-    }
-    
-    setHeatmapData(weeks);
+    // Generate heatmap data from habits
+    const data = generateHeatmapData(habits);
+    setHeatmapData(data);
   }, [habits]);
 
   const getHeatmapColor = (intensity: number) => {
-    if (intensity === 0) return currentTheme.card;
-    const colors = [
-      currentTheme.primary + '20',
-      currentTheme.primary + '40',
-      currentTheme.primary + '60',
-      currentTheme.primary + '80',
-      currentTheme.primary,
-    ];
-    return colors[intensity - 1] || currentTheme.card;
+    if (intensity === 0) return surfaceColor;
+    const alpha = Math.min(intensity / 5, 1);
+    return `${primaryColor}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
   };
-
-  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: currentTheme.background }]} 
+      style={[styles.container, { backgroundColor }]} 
       edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: currentTheme.text }]}>Progress</Text>
+        <Text style={[styles.title, { color: textColor }]}>
+          Progress
+        </Text>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* Stats Cards */}
-        <View style={styles.statsGrid}>
-          <Animated.View 
-            entering={FadeInDown.duration(500)}
-            style={[styles.statCard, { backgroundColor: currentTheme.card }]}
-          >
+      <ScrollView style={styles.scrollView}>
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: surfaceColor }]}>
             <IconSymbol 
-              ios_icon_name="flame" 
+              ios_icon_name="flame.fill" 
               android_material_icon_name="local-fire-department" 
               size={32} 
-              color={currentTheme.accent} 
+              color={primaryColor} 
             />
-            <Text style={[styles.statValue, { color: currentTheme.text }]}>
-              {stats.currentStreak || 0}
+            <Text style={[styles.statValue, { color: textColor }]}>
+              {stats?.currentStreak || 0}
             </Text>
-            <Text style={[styles.statLabel, { color: currentTheme.textSecondary }]}>
+            <Text style={[styles.statLabel, { color: textSecondaryColor }]}>
               Day Streak
             </Text>
-          </Animated.View>
+          </View>
 
-          <Animated.View 
-            entering={FadeInDown.delay(100).duration(500)}
-            style={[styles.statCard, { backgroundColor: currentTheme.card }]}
-          >
+          <View style={[styles.statCard, { backgroundColor: surfaceColor }]}>
             <IconSymbol 
-              ios_icon_name="checkmark.circle" 
+              ios_icon_name="checkmark.circle.fill" 
               android_material_icon_name="check-circle" 
               size={32} 
-              color={currentTheme.success} 
+              color={successColor} 
             />
-            <Text style={[styles.statValue, { color: currentTheme.text }]}>
-              {stats.totalCheckIns || 0}
+            <Text style={[styles.statValue, { color: textColor }]}>
+              {stats?.totalCheckIns || 0}
             </Text>
-            <Text style={[styles.statLabel, { color: currentTheme.textSecondary }]}>
+            <Text style={[styles.statLabel, { color: textSecondaryColor }]}>
               Total Check-ins
             </Text>
-          </Animated.View>
+          </View>
+        </Animated.View>
 
-          <Animated.View 
-            entering={FadeInDown.delay(200).duration(500)}
-            style={[styles.statCard, { backgroundColor: currentTheme.card }]}
-          >
-            <IconSymbol 
-              ios_icon_name="chart.bar" 
-              android_material_icon_name="bar-chart" 
-              size={32} 
-              color={currentTheme.primary} 
-            />
-            <Text style={[styles.statValue, { color: currentTheme.text }]}>
-              {stats.consistency || 0}%
-            </Text>
-            <Text style={[styles.statLabel, { color: currentTheme.textSecondary }]}>
-              Consistency
-            </Text>
-          </Animated.View>
-
-          <Animated.View 
-            entering={FadeInDown.delay(300).duration(500)}
-            style={[styles.statCard, { backgroundColor: currentTheme.card }]}
-          >
-            <IconSymbol 
-              ios_icon_name="target" 
-              android_material_icon_name="track-changes" 
-              size={32} 
-              color={currentTheme.secondary} 
-            />
-            <Text style={[styles.statValue, { color: currentTheme.text }]}>
-              {stats.activeHabits || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: currentTheme.textSecondary }]}>
-              Active Habits
-            </Text>
-          </Animated.View>
-        </View>
-
-        {/* Calendar Heatmap */}
-        <Animated.View 
-          entering={FadeInDown.delay(400).duration(500)}
-          style={[styles.section, { backgroundColor: currentTheme.card }]}
-        >
-          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>
-            Activity Calendar
+        <Animated.View entering={FadeInDown.delay(200)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            Activity Heatmap
           </Text>
-          <Text style={[styles.sectionSubtitle, { color: currentTheme.textSecondary }]}>
-            Last 12 weeks
-          </Text>
+          <View style={[styles.heatmapContainer, { backgroundColor: surfaceColor }]}>
+            <Text style={[styles.heatmapPlaceholder, { color: textSecondaryColor }]}>
+              Complete habits to see your activity
+            </Text>
+          </View>
+        </Animated.View>
 
-          <View style={styles.heatmapContainer}>
-            {/* Day labels */}
-            <View style={styles.dayLabels}>
-              {weekDays.map((day, index) => (
-                <Text 
-                  key={index} 
-                  style={[
-                    styles.dayLabel, 
-                    { color: currentTheme.textSecondary, width: CELL_SIZE }
-                  ]}
-                >
-                  {day}
-                </Text>
-              ))}
+        <Animated.View entering={FadeInDown.delay(300)} style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            Habit Performance
+          </Text>
+          {habits.length === 0 ? (
+            <View style={[styles.emptyState, { backgroundColor: surfaceColor }]}>
+              <IconSymbol 
+                ios_icon_name="chart.bar" 
+                android_material_icon_name="bar-chart" 
+                size={48} 
+                color={textSecondaryColor} 
+              />
+              <Text style={[styles.emptyText, { color: textSecondaryColor }]}>
+                No habits yet. Start tracking to see your progress!
+              </Text>
             </View>
-
-            {/* Heatmap grid */}
-            <View style={styles.heatmapGrid}>
-              {heatmapData.map((week, weekIndex) => (
-                <View key={weekIndex} style={styles.weekColumn}>
-                  {week.map((day: any, dayIndex: number) => (
-                    <View
-                      key={dayIndex}
-                      style={[
-                        styles.heatmapCell,
-                        {
-                          backgroundColor: getHeatmapColor(day.intensity),
-                          width: CELL_SIZE - 4,
-                          height: CELL_SIZE - 4,
-                        },
-                      ]}
-                    />
-                  ))}
+          ) : (
+            habits.map((habit, index) => (
+              <Animated.View 
+                key={habit.id} 
+                entering={FadeInDown.delay(400 + index * 50)}
+                style={[styles.habitCard, { backgroundColor: surfaceColor }]}
+              >
+                <View style={styles.habitHeader}>
+                  <Text style={[styles.habitName, { color: textColor }]}>
+                    {habit.name}
+                  </Text>
+                  <Text style={[styles.habitStrength, { color: primaryColor }]}>
+                    {habit.strength || 0}%
+                  </Text>
                 </View>
-              ))}
-            </View>
-
-            {/* Legend */}
-            <View style={styles.legend}>
-              <Text style={[styles.legendText, { color: currentTheme.textSecondary }]}>
-                Less
-              </Text>
-              {[0, 1, 2, 3, 4].map((intensity) => (
-                <View
-                  key={intensity}
-                  style={[
-                    styles.legendCell,
-                    { backgroundColor: getHeatmapColor(intensity) },
-                  ]}
-                />
-              ))}
-              <Text style={[styles.legendText, { color: currentTheme.textSecondary }]}>
-                More
-              </Text>
-            </View>
-          </View>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { 
+                        width: `${habit.strength || 0}%`,
+                        backgroundColor: primaryColor
+                      }
+                    ]} 
+                  />
+                </View>
+              </Animated.View>
+            ))
+          )}
         </Animated.View>
-
-        {/* Insights */}
-        <Animated.View 
-          entering={FadeInDown.delay(500).duration(500)}
-          style={[styles.section, { backgroundColor: currentTheme.card }]}
-        >
-          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>
-            Insights
-          </Text>
-          
-          <View style={styles.insightItem}>
-            <IconSymbol 
-              ios_icon_name="lightbulb" 
-              android_material_icon_name="lightbulb" 
-              size={20} 
-              color={currentTheme.accent} 
-            />
-            <Text style={[styles.insightText, { color: currentTheme.text }]}>
-              You&apos;re most consistent on Tuesdays and Thursdays
-            </Text>
-          </View>
-
-          <View style={styles.insightItem}>
-            <IconSymbol 
-              ios_icon_name="trophy" 
-              android_material_icon_name="emoji-events" 
-              size={20} 
-              color={currentTheme.accent} 
-            />
-            <Text style={[styles.insightText, { color: currentTheme.text }]}>
-              Your longest streak is {stats.currentStreak || 0} days!
-            </Text>
-          </View>
-
-          <View style={styles.insightItem}>
-            <IconSymbol 
-              ios_icon_name="chart.line.uptrend" 
-              android_material_icon_name="trending-up" 
-              size={20} 
-              color={currentTheme.success} 
-            />
-            <Text style={[styles.insightText, { color: currentTheme.text }]}>
-              You&apos;ve completed {stats.totalCheckIns || 0} habits this month
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Bottom spacing for tab bar */}
-        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function generateHeatmapData(habits: any[]) {
+  // Placeholder for heatmap generation logic
+  return [];
 }
 
 const styles = StyleSheet.create({
@@ -269,114 +152,93 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingVertical: 16,
   },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
   },
-  content: {
+  scrollView: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 20,
-  },
-  statsGrid: {
+  statsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    paddingHorizontal: 20,
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   statCard: {
-    width: '48%',
-    padding: 20,
+    flex: 1,
     borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    gap: 8,
   },
   statValue: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginTop: 8,
+    fontSize: 28,
+    fontWeight: 'bold',
   },
   statLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 4,
+    fontSize: 12,
+    textAlign: 'center',
   },
   section: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   heatmapContainer: {
-    marginTop: 8,
+    borderRadius: 16,
+    padding: 20,
+    minHeight: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  dayLabels: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  dayLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  heatmapPlaceholder: {
+    fontSize: 14,
     textAlign: 'center',
   },
-  heatmapGrid: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  weekColumn: {
-    gap: 4,
-  },
-  heatmapCell: {
-    borderRadius: 4,
-  },
-  legend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: 16,
-  },
-  legendText: {
-    fontSize: 11,
-    marginHorizontal: 4,
-  },
-  legendCell: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
-  },
-  insightItem: {
-    flexDirection: 'row',
+  emptyState: {
+    borderRadius: 16,
+    padding: 40,
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
-  insightText: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 20,
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  habitCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  habitHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  habitName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  habitStrength: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 });

@@ -16,101 +16,95 @@ export interface Theme {
     success: string;
     warning: string;
     error: string;
-    cardBackground: string;
   };
 }
 
 export const THEMES: Theme[] = [
   {
-    id: 'ocean',
-    name: 'Ocean Breeze',
+    id: 'default',
+    name: 'Ocean Blue',
     colors: {
-      primary: '#0EA5E9',
-      secondary: '#06B6D4',
-      background: '#F0F9FF',
-      surface: '#FFFFFF',
-      text: '#0C4A6E',
-      textSecondary: '#64748B',
-      border: '#BAE6FD',
-      success: '#10B981',
-      warning: '#F59E0B',
-      error: '#EF4444',
-      cardBackground: '#E0F2FE',
+      primary: '#007AFF',
+      secondary: '#5856D6',
+      background: '#000000',
+      surface: '#1C1C1E',
+      text: '#FFFFFF',
+      textSecondary: '#98989D',
+      border: '#38383A',
+      success: '#34C759',
+      warning: '#FF9500',
+      error: '#FF3B30',
     },
   },
   {
     id: 'sunset',
     name: 'Sunset Glow',
     colors: {
-      primary: '#F97316',
-      secondary: '#FB923C',
-      background: '#FFF7ED',
-      surface: '#FFFFFF',
-      text: '#7C2D12',
-      textSecondary: '#78716C',
-      border: '#FED7AA',
-      success: '#10B981',
-      warning: '#F59E0B',
-      error: '#EF4444',
-      cardBackground: '#FFEDD5',
+      primary: '#FF6B6B',
+      secondary: '#FFB347',
+      background: '#1A0E0E',
+      surface: '#2D1B1B',
+      text: '#FFFFFF',
+      textSecondary: '#B89898',
+      border: '#4A3333',
+      success: '#6BCF7F',
+      warning: '#FFB347',
+      error: '#FF4757',
     },
   },
   {
     id: 'forest',
     name: 'Forest Green',
     colors: {
-      primary: '#10B981',
-      secondary: '#34D399',
-      background: '#F0FDF4',
-      surface: '#FFFFFF',
-      text: '#064E3B',
-      textSecondary: '#6B7280',
-      border: '#BBF7D0',
-      success: '#10B981',
-      warning: '#F59E0B',
-      error: '#EF4444',
-      cardBackground: '#D1FAE5',
+      primary: '#2ECC71',
+      secondary: '#27AE60',
+      background: '#0A1612',
+      surface: '#1A2C24',
+      text: '#FFFFFF',
+      textSecondary: '#98B8A8',
+      border: '#2D4A3A',
+      success: '#2ECC71',
+      warning: '#F39C12',
+      error: '#E74C3C',
     },
   },
   {
     id: 'lavender',
     name: 'Lavender Dream',
     colors: {
-      primary: '#A855F7',
-      secondary: '#C084FC',
-      background: '#FAF5FF',
-      surface: '#FFFFFF',
-      text: '#581C87',
-      textSecondary: '#71717A',
-      border: '#E9D5FF',
-      success: '#10B981',
-      warning: '#F59E0B',
-      error: '#EF4444',
-      cardBackground: '#F3E8FF',
+      primary: '#9B59B6',
+      secondary: '#8E44AD',
+      background: '#14101A',
+      surface: '#241C2D',
+      text: '#FFFFFF',
+      textSecondary: '#B098C8',
+      border: '#3A2D4A',
+      success: '#1ABC9C',
+      warning: '#F39C12',
+      error: '#E74C3C',
     },
   },
   {
     id: 'midnight',
     name: 'Midnight Blue',
     colors: {
-      primary: '#3B82F6',
-      secondary: '#60A5FA',
-      background: '#EFF6FF',
-      surface: '#FFFFFF',
-      text: '#1E3A8A',
-      textSecondary: '#64748B',
-      border: '#BFDBFE',
-      success: '#10B981',
-      warning: '#F59E0B',
-      error: '#EF4444',
-      cardBackground: '#DBEAFE',
+      primary: '#3498DB',
+      secondary: '#2980B9',
+      background: '#0C1218',
+      surface: '#1C2A36',
+      text: '#FFFFFF',
+      textSecondary: '#98A8B8',
+      border: '#2D3A4A',
+      success: '#16A085',
+      warning: '#F39C12',
+      error: '#C0392B',
     },
   },
 ];
 
 interface ThemeContextType {
-  theme: Theme;
-  setTheme: (themeId: string) => void;
+  currentTheme: Theme;
+  setTheme: (themeId: string) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -118,7 +112,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = '@momentum_theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(THEMES[0]);
+  const [currentTheme, setCurrentTheme] = useState<Theme>(THEMES[0]);
 
   useEffect(() => {
     loadTheme();
@@ -128,30 +122,30 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       const savedThemeId = await AsyncStorage.getItem(THEME_STORAGE_KEY);
       if (savedThemeId) {
-        const savedTheme = THEMES.find(t => t.id === savedThemeId);
-        if (savedTheme) {
-          setThemeState(savedTheme);
+        const theme = THEMES.find(t => t.id === savedThemeId);
+        if (theme) {
+          setCurrentTheme(theme);
         }
       }
     } catch (error) {
-      console.error('Error loading theme:', error);
+      console.error('Failed to load theme:', error);
     }
   };
 
   const setTheme = async (themeId: string) => {
-    const newTheme = THEMES.find(t => t.id === themeId);
-    if (newTheme) {
-      setThemeState(newTheme);
-      try {
+    try {
+      const theme = THEMES.find(t => t.id === themeId);
+      if (theme) {
+        setCurrentTheme(theme);
         await AsyncStorage.setItem(THEME_STORAGE_KEY, themeId);
-      } catch (error) {
-        console.error('Error saving theme:', error);
       }
+    } catch (error) {
+      console.error('Failed to save theme:', error);
     }
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ currentTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -159,7 +153,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useAppTheme() {
   const context = useContext(ThemeContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAppTheme must be used within ThemeProvider');
   }
   return context;
