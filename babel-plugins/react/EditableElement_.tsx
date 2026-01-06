@@ -46,6 +46,12 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
   } = useContext(EditableContext);
 
   const { children } = _props;
+  
+  // Early return if children is invalid
+  if (!children || !children.props) {
+    return children;
+  }
+
   const { props } = children;
 
   // If we are not running in the web the windows will causes
@@ -55,16 +61,16 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
   }
 
   const type = getType(children);
-  const __sourceLocation = props.__sourceLocation;
-  const __trace = props.__trace;
-  const id = __trace?.join("") || "";
-  const attributes = overwrittenProps?.[id] ?? {};
-
-  // If type is not recognized, just return the children as-is
-  // This prevents wrapping components like LinearGradient that don't need editing
+  
+  // If type is undefined (unrecognized component like LinearGradient), return as-is
   if (!type) {
     return children;
   }
+
+  const __sourceLocation = props.__sourceLocation;
+  const __trace = props.__trace;
+  const id = __trace.join("");
+  const attributes = overwrittenProps?.[id] ?? {};
 
   const editStyling =
     selected === id
@@ -143,6 +149,6 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
     });
   }
 
-  // Fallback: return children as-is
+  // Fallback for any other recognized types
   return children;
 }
