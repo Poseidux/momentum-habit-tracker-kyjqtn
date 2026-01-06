@@ -1,332 +1,229 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
-import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
-import { colors } from '@/styles/commonStyles';
-import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '@/contexts/AuthContext';
 import { useAppTheme, THEMES } from '@/contexts/ThemeContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ProfileScreen() {
-  const theme = useTheme();
-  const { user, signOut } = useAuth();
-  const router = useRouter();
   const { currentTheme, setTheme } = useAppTheme();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
+    try {
+      await signOut();
+      Alert.alert('Success', 'Signed out successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign out');
+    }
+  };
+
+  const handleSignIn = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      'Premium Required',
+      'Creating an account requires a Premium subscription. Upgrade now to unlock unlimited habits, advanced analytics, and more!',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut();
-              Alert.alert('Success', 'You have been signed out. You can continue using the app with freemium features.');
-            } catch (error) {
-              console.error('Sign out error:', error);
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
-            }
-          },
-        },
+        { text: 'Upgrade to Premium', onPress: () => router.push('/auth/sign-in' as any) }
       ]
     );
   };
 
-  const handleSignIn = () => {
-    router.push('/auth/sign-in');
-  };
-
   const handleThemeSelect = (themeId: string) => {
     setTheme(themeId);
-    Alert.alert('Theme Changed', 'Your new theme has been applied!');
+    Alert.alert('Theme Applied', 'Your new theme has been applied!');
   };
-
-  const menuItems = [
-    {
-      icon: 'notifications',
-      label: 'Notifications',
-      onPress: () => Alert.alert('Coming Soon', 'Notifications settings will be available soon!'),
-    },
-    {
-      icon: 'calendar-today',
-      label: 'Reminders',
-      onPress: () => Alert.alert('Coming Soon', 'Reminder settings will be available soon!'),
-    },
-    {
-      icon: 'group',
-      label: 'Habit Groups',
-      onPress: () => router.push('/habit-groups' as any),
-    },
-    {
-      icon: 'download',
-      label: 'Export Data',
-      onPress: () => Alert.alert('Coming Soon', 'Data export will be available soon!'),
-    },
-    {
-      icon: 'lock',
-      label: 'Privacy',
-      onPress: () => Alert.alert('Coming Soon', 'Privacy settings will be available soon!'),
-    },
-    {
-      icon: 'help',
-      label: 'Help & Support',
-      onPress: () => Alert.alert('Help & Support', 'Need help? Contact us at support@momentum.app'),
-    },
-  ];
 
   return (
     <SafeAreaView 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: theme.dark ? currentTheme.backgroundDark : currentTheme.background,
-        }
-      ]}
+      style={[styles.container, { backgroundColor: currentTheme.background }]} 
       edges={['top']}
     >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
-            Profile
-          </Text>
-        </View>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: currentTheme.text }]}>Profile</Text>
+      </View>
 
-        {/* User Info Card or Sign In Prompt */}
-        {user ? (
-          <View
-            style={[
-              styles.userCard,
-              { 
-                backgroundColor: theme.dark ? currentTheme.cardDark : currentTheme.card,
-                borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-              }
-            ]}
-          >
-            <View style={[styles.avatar, { backgroundColor: currentTheme.primary }]}>
-              <Text style={styles.avatarText}>
-                {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={[styles.userName, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
-                {user?.name || 'User'}
-              </Text>
-              <Text style={[styles.userEmail, { color: theme.dark ? currentTheme.textSecondaryDark : currentTheme.textSecondary }]}>
-                {user?.email || 'user@example.com'}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.signInPrompt}
-            onPress={handleSignIn}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={[currentTheme.primary, currentTheme.primaryDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.signInGradient}
-            >
-              <IconSymbol
-                ios_icon_name="person.circle"
-                android_material_icon_name="account-circle"
-                size={48}
-                color="#FFFFFF"
-              />
-              <Text style={styles.signInTitle}>Sign In for Full Access</Text>
-              <Text style={styles.signInSubtitle}>
-                Sync your habits across devices and unlock premium features
-              </Text>
-              <View style={styles.signInButton}>
-                <Text style={styles.signInButtonText}>Sign In</Text>
-                <IconSymbol
-                  ios_icon_name="arrow.right"
-                  android_material_icon_name="arrow-forward"
-                  size={20}
-                  color="#FFFFFF"
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        {/* User Info Card */}
+        <View style={[styles.card, { backgroundColor: currentTheme.card }]}>
+          {user ? (
+            <>
+              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.primary + '20' }]}>
+                <IconSymbol 
+                  ios_icon_name="person.fill" 
+                  android_material_icon_name="person" 
+                  size={40} 
+                  color={currentTheme.primary} 
                 />
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
-        {/* Freemium Info Banner */}
-        {!user && (
-          <View
-            style={[
-              styles.infoBanner,
-              { 
-                backgroundColor: currentTheme.success + '15',
-                borderColor: currentTheme.success + '30',
-              }
-            ]}
-          >
-            <IconSymbol
-              ios_icon_name="checkmark.circle"
-              android_material_icon_name="check-circle"
-              size={24}
-              color={currentTheme.success}
-            />
-            <View style={styles.infoText}>
-              <Text style={[styles.infoTitle, { color: currentTheme.success }]}>
-                Free Features Active
+              <Text style={[styles.userName, { color: currentTheme.text }]}>
+                {user.name || user.email}
               </Text>
-              <Text style={[styles.infoSubtitle, { color: currentTheme.success }]}>
-                Track up to 3 habits with basic stats
+              <Text style={[styles.userEmail, { color: currentTheme.textSecondary }]}>
+                {user.email}
               </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Premium Banner */}
-        <TouchableOpacity
-          style={[
-            styles.premiumBanner,
-            { 
-              backgroundColor: currentTheme.accent + '15',
-              borderColor: currentTheme.accent + '30',
-            }
-          ]}
-          onPress={() => Alert.alert('Premium', 'Premium features coming soon!')}
-          activeOpacity={0.8}
-        >
-          <IconSymbol
-            ios_icon_name="star.fill"
-            android_material_icon_name="star"
-            size={28}
-            color={currentTheme.accent}
-          />
-          <View style={styles.premiumText}>
-            <Text style={[styles.premiumTitle, { color: currentTheme.accent }]}>
-              Upgrade to Premium
-            </Text>
-            <Text style={[styles.premiumSubtitle, { color: currentTheme.accent }]}>
-              Unlimited habits, advanced insights & more
-            </Text>
-          </View>
-          <IconSymbol
-            ios_icon_name="chevron.right"
-            android_material_icon_name="arrow-forward"
-            size={20}
-            color={currentTheme.accent}
-          />
-        </TouchableOpacity>
-
-        {/* Theme Section */}
-        <View style={styles.themeSection}>
-          <Text style={[styles.sectionTitle, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
-            Themes
-          </Text>
-          <View style={styles.themesGrid}>
-            {THEMES.map((themeOption, index) => (
-              <React.Fragment key={index}>
-                <TouchableOpacity
-                  style={[
-                    styles.themeCard,
-                    { 
-                      backgroundColor: theme.dark ? currentTheme.cardDark : currentTheme.card,
-                      borderColor: currentTheme.id === themeOption.id ? currentTheme.primary : 'transparent',
-                      borderWidth: 2,
-                    }
-                  ]}
-                  onPress={() => handleThemeSelect(themeOption.id)}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={[themeOption.primary, themeOption.secondary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.themePreview}
+              {user.isPremium && (
+                <View style={[styles.premiumBadge, { backgroundColor: currentTheme.accent + '20' }]}>
+                  <IconSymbol 
+                    ios_icon_name="star.fill" 
+                    android_material_icon_name="star" 
+                    size={16} 
+                    color={currentTheme.accent} 
                   />
-                  <Text style={[styles.themeName, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
-                    {themeOption.name}
+                  <Text style={[styles.premiumText, { color: currentTheme.accent }]}>
+                    Premium
                   </Text>
-                  {currentTheme.id === themeOption.id && (
-                    <View style={[styles.activeIndicator, { backgroundColor: currentTheme.primary }]}>
-                      <IconSymbol
-                        ios_icon_name="checkmark"
-                        android_material_icon_name="check"
-                        size={16}
-                        color="#FFFFFF"
-                      />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </React.Fragment>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.primary + '20' }]}>
+                <IconSymbol 
+                  ios_icon_name="person.fill" 
+                  android_material_icon_name="person" 
+                  size={40} 
+                  color={currentTheme.primary} 
+                />
+              </View>
+              <Text style={[styles.userName, { color: currentTheme.text }]}>
+                Free User
+              </Text>
+              <Text style={[styles.userEmail, { color: currentTheme.textSecondary }]}>
+                Limited to 3 habits
+              </Text>
+            </>
+          )}
+        </View>
+
+        {/* Themes Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Themes</Text>
+          <Text style={[styles.sectionSubtitle, { color: currentTheme.textSecondary }]}>
+            Choose your preferred color scheme
+          </Text>
+          
+          <View style={styles.themesGrid}>
+            {THEMES.map((theme) => (
+              <TouchableOpacity
+                key={theme.id}
+                style={[
+                  styles.themeCard,
+                  { backgroundColor: currentTheme.card },
+                  currentTheme.id === theme.id && { 
+                    borderWidth: 2, 
+                    borderColor: currentTheme.primary 
+                  }
+                ]}
+                onPress={() => handleThemeSelect(theme.id)}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={[theme.primary, theme.secondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.themePreview}
+                />
+                <Text style={[styles.themeName, { color: currentTheme.text }]}>
+                  {theme.name}
+                </Text>
+                {currentTheme.id === theme.id && (
+                  <View style={[styles.activeIndicator, { backgroundColor: currentTheme.primary }]}>
+                    <IconSymbol 
+                      ios_icon_name="checkmark" 
+                      android_material_icon_name="check" 
+                      size={12} 
+                      color="#FFFFFF" 
+                    />
+                  </View>
+                )}
+              </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          {menuItems.map((item, index) => (
-            <React.Fragment key={index}>
-              <TouchableOpacity
-                style={[
-                  styles.menuItem,
-                  { 
-                    backgroundColor: theme.dark ? currentTheme.cardDark : currentTheme.card,
-                    borderColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                  }
-                ]}
-                onPress={item.onPress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.menuItemLeft}>
-                  <View style={[styles.menuIcon, { backgroundColor: currentTheme.primary + '15' }]}>
-                    <IconSymbol
-                      ios_icon_name={item.icon}
-                      android_material_icon_name={item.icon}
-                      size={20}
-                      color={currentTheme.primary}
-                    />
-                  </View>
-                  <Text style={[styles.menuLabel, { color: theme.dark ? currentTheme.textDark : currentTheme.text }]}>
-                    {item.label}
-                  </Text>
-                </View>
-                <IconSymbol
-                  ios_icon_name="chevron.right"
-                  android_material_icon_name="arrow-forward"
-                  size={20}
-                  color={theme.dark ? currentTheme.textSecondaryDark : currentTheme.textSecondary}
-                />
-              </TouchableOpacity>
-            </React.Fragment>
-          ))}
+        {/* Settings Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Settings</Text>
+          
+          <TouchableOpacity 
+            style={[styles.settingItem, { backgroundColor: currentTheme.card }]}
+            onPress={() => router.push('/habit-groups' as any)}
+          >
+            <View style={styles.settingLeft}>
+              <IconSymbol 
+                ios_icon_name="person.3.fill" 
+                android_material_icon_name="group" 
+                size={24} 
+                color={currentTheme.primary} 
+              />
+              <Text style={[styles.settingText, { color: currentTheme.text }]}>
+                Habit Groups
+              </Text>
+            </View>
+            <IconSymbol 
+              ios_icon_name="chevron.right" 
+              android_material_icon_name="chevron-right" 
+              size={20} 
+              color={currentTheme.textSecondary} 
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Sign Out Button - Only show if user is signed in */}
-        {user && (
-          <TouchableOpacity
-            style={[styles.signOutButton, { backgroundColor: colors.danger }]}
-            onPress={handleSignOut}
-            activeOpacity={0.8}
-          >
-            <IconSymbol
-              ios_icon_name="arrow.right.square"
-              android_material_icon_name="logout"
-              size={20}
-              color="#FFFFFF"
-            />
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
-        )}
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Account</Text>
+          
+          {user ? (
+            <TouchableOpacity 
+              style={[styles.settingItem, { backgroundColor: currentTheme.card }]}
+              onPress={handleSignOut}
+            >
+              <View style={styles.settingLeft}>
+                <IconSymbol 
+                  ios_icon_name="rectangle.portrait.and.arrow.right" 
+                  android_material_icon_name="exit-to-app" 
+                  size={24} 
+                  color={currentTheme.accent} 
+                />
+                <Text style={[styles.settingText, { color: currentTheme.text }]}>
+                  Sign Out
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.settingItem, { backgroundColor: currentTheme.card }]}
+              onPress={handleSignIn}
+            >
+              <View style={styles.settingLeft}>
+                <IconSymbol 
+                  ios_icon_name="arrow.right.circle.fill" 
+                  android_material_icon_name="login" 
+                  size={24} 
+                  color={currentTheme.primary} 
+                />
+                <Text style={[styles.settingText, { color: currentTheme.text }]}>
+                  Upgrade to Premium
+                </Text>
+              </View>
+              <View style={[styles.premiumBadge, { backgroundColor: currentTheme.accent + '20' }]}>
+                <IconSymbol 
+                  ios_icon_name="star.fill" 
+                  android_material_icon_name="star" 
+                  size={14} 
+                  color={currentTheme.accent} 
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
 
-        {/* Bottom padding for floating tab bar */}
+        {/* Bottom spacing for tab bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
@@ -337,149 +234,72 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
   header: {
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 34,
+    fontWeight: 'bold',
   },
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  userInfo: {
+  content: {
     flex: 1,
   },
+  contentContainer: {
+    padding: 20,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
   userName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    fontWeight: '500',
+    marginBottom: 12,
   },
-  signInPrompt: {
-    borderRadius: 20,
-    marginBottom: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  signInGradient: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  signInTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  signInSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    opacity: 0.9,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  signInButton: {
+  premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
-    gap: 8,
-  },
-  signInButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  infoText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  infoSubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  premiumBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 1,
+    marginTop: 8,
   },
   premiumText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  premiumTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  premiumSubtitle: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  themeSection: {
+  section: {
     marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
     marginBottom: 16,
   },
   themesGrid: {
@@ -489,21 +309,23 @@ const styles = StyleSheet.create({
   },
   themeCard: {
     width: '48%',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 12,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 2,
   },
   themePreview: {
-    height: 80,
-    borderRadius: 12,
-    marginBottom: 12,
+    width: '100%',
+    height: 60,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   themeName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -511,52 +333,32 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  menuSection: {
-    marginBottom: 24,
-  },
-  menuItem: {
+  settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 12,
     padding: 16,
+    borderRadius: 12,
     marginBottom: 8,
-    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  menuItemLeft: {
+  settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  menuIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  menuLabel: {
+  settingText: {
     fontSize: 16,
-    fontWeight: '600',
-  },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-    gap: 8,
-  },
-  signOutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '500',
   },
 });

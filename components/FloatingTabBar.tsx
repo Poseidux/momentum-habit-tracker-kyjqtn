@@ -12,7 +12,6 @@ import { useRouter, usePathname } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -22,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Href } from 'expo-router';
+import { useAppTheme } from '@/contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -47,7 +47,7 @@ export default function FloatingTabBar({
 }: FloatingTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const theme = useTheme();
+  const { currentTheme } = useAppTheme();
   const animatedValue = useSharedValue(0);
 
   // Improved active tab detection
@@ -119,10 +119,10 @@ export default function FloatingTabBar({
       ]}>
         <View style={[styles.outerGlow, { borderRadius }]}>
           <LinearGradient
-            colors={theme.dark 
-              ? ['rgba(99, 102, 241, 0.15)', 'rgba(139, 92, 246, 0.15)']
-              : ['rgba(99, 102, 241, 0.08)', 'rgba(139, 92, 246, 0.08)']
-            }
+            colors={[
+              currentTheme.primary + '20',
+              currentTheme.secondary + '20'
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.gradientBorder, { borderRadius }]}
@@ -134,24 +134,25 @@ export default function FloatingTabBar({
               <View style={[
                 styles.background,
                 {
-                  backgroundColor: theme.dark
-                    ? 'rgba(30, 41, 59, 0.85)'
-                    : 'rgba(255, 255, 255, 0.85)',
+                  backgroundColor: currentTheme.card + 'D9',
                 }
               ]} />
               
               {/* Animated Indicator with Gradient */}
               <Animated.View style={[styles.indicatorWrapper, indicatorStyle]}>
                 <LinearGradient
-                  colors={theme.dark
-                    ? ['rgba(99, 102, 241, 0.25)', 'rgba(139, 92, 246, 0.25)']
-                    : ['rgba(99, 102, 241, 0.15)', 'rgba(139, 92, 246, 0.15)']
-                  }
+                  colors={[
+                    currentTheme.primary + '30',
+                    currentTheme.secondary + '30'
+                  ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={[
                     styles.indicator,
-                    { width: `${tabWidthPercent}%` as `${number}%` }
+                    { 
+                      width: `${tabWidthPercent}%` as `${number}%`,
+                      borderColor: currentTheme.primary + '50'
+                    }
                   ]}
                 />
               </Animated.View>
@@ -172,7 +173,10 @@ export default function FloatingTabBar({
                           {isActive ? (
                             <View style={styles.activeIconContainer}>
                               <LinearGradient
-                                colors={['rgba(99, 102, 241, 0.2)', 'rgba(139, 92, 246, 0.2)']}
+                                colors={[
+                                  currentTheme.primary + '30',
+                                  currentTheme.secondary + '30'
+                                ]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
                                 style={styles.activeIconGradient}
@@ -181,7 +185,7 @@ export default function FloatingTabBar({
                                   android_material_icon_name={tab.icon}
                                   ios_icon_name={tab.icon}
                                   size={26}
-                                  color={theme.colors.primary}
+                                  color={currentTheme.primary}
                                 />
                               </LinearGradient>
                             </View>
@@ -190,15 +194,15 @@ export default function FloatingTabBar({
                               android_material_icon_name={tab.icon}
                               ios_icon_name={tab.icon}
                               size={24}
-                              color={theme.dark ? '#94A3B8' : '#64748B'}
+                              color={currentTheme.textSecondary}
                             />
                           )}
                           <Text
                             style={[
                               styles.tabLabel,
-                              { color: theme.dark ? '#94A3B8' : '#64748B' },
+                              { color: currentTheme.textSecondary },
                               isActive && { 
-                                color: theme.colors.primary, 
+                                color: currentTheme.primary, 
                                 fontWeight: '700',
                               },
                             ]}
@@ -258,7 +262,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 22,
     borderWidth: 1.5,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
   },
   tabsContainer: {
     flexDirection: 'row',
