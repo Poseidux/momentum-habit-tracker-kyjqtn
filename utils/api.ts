@@ -1,3 +1,4 @@
+
 /**
  * API Utilities Template
  *
@@ -10,6 +11,7 @@
  * - Type-safe request/response handling
  * - Helper functions for common HTTP methods
  * - Automatic bearer token management for authenticated requests
+ * - Timeout support for all requests
  *
  * Usage:
  * 1. Import BACKEND_URL or helper functions
@@ -62,33 +64,44 @@ export const getBearerToken = async (): Promise<string | null> => {
   }
 };
 
+interface ApiCallOptions extends RequestInit {
+  timeout?: number;
+}
+
 /**
- * Generic API call helper with error handling
+ * Generic API call helper with error handling and timeout support
  *
  * @param endpoint - API endpoint path (e.g., '/users', '/auth/login')
- * @param options - Fetch options (method, headers, body, etc.)
+ * @param options - Fetch options (method, headers, body, timeout, etc.)
  * @returns Parsed JSON response
  * @throws Error if backend is not configured or request fails
  */
 export const apiCall = async <T = any>(
   endpoint: string,
-  options?: RequestInit
+  options?: ApiCallOptions
 ): Promise<T> => {
   if (!isBackendConfigured()) {
     throw new Error("Backend URL not configured. Please rebuild the app.");
   }
 
   const url = `${BACKEND_URL}${endpoint}`;
+  const timeout = options?.timeout || 10000; // Default 10 second timeout
   console.log("[API] Calling:", url, options?.method || "GET");
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
     const response = await fetch(url, {
       ...options,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...options?.headers,
       },
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const text = await response.text();
@@ -99,7 +112,11 @@ export const apiCall = async <T = any>(
     const data = await response.json();
     console.log("[API] Success:", data);
     return data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.error("[API] Request timeout");
+      throw new Error("Request timeout");
+    }
     console.error("[API] Request failed:", error);
     throw error;
   }
@@ -108,8 +125,8 @@ export const apiCall = async <T = any>(
 /**
  * GET request helper
  */
-export const apiGet = async <T = any>(endpoint: string): Promise<T> => {
-  return apiCall<T>(endpoint, { method: "GET" });
+export const apiGet = async <T = any>(endpoint: string, options?: ApiCallOptions): Promise<T> => {
+  return apiCall<T>(endpoint, { ...options, method: "GET" });
 };
 
 /**
@@ -117,9 +134,11 @@ export const apiGet = async <T = any>(endpoint: string): Promise<T> => {
  */
 export const apiPost = async <T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options?: ApiCallOptions
 ): Promise<T> => {
   return apiCall<T>(endpoint, {
+    ...options,
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -130,9 +149,11 @@ export const apiPost = async <T = any>(
  */
 export const apiPut = async <T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options?: ApiCallOptions
 ): Promise<T> => {
   return apiCall<T>(endpoint, {
+    ...options,
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -143,9 +164,11 @@ export const apiPut = async <T = any>(
  */
 export const apiPatch = async <T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options?: ApiCallOptions
 ): Promise<T> => {
   return apiCall<T>(endpoint, {
+    ...options,
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -154,8 +177,8 @@ export const apiPatch = async <T = any>(
 /**
  * DELETE request helper
  */
-export const apiDelete = async <T = any>(endpoint: string): Promise<T> => {
-  return apiCall<T>(endpoint, { method: "DELETE" });
+export const apiDelete = async <T = any>(endpoint: string, options?: ApiCallOptions): Promise<T> => {
+  return apiCall<T>(endpoint, { ...options, method: "DELETE" });
 };
 
 /**
@@ -163,13 +186,13 @@ export const apiDelete = async <T = any>(endpoint: string): Promise<T> => {
  * Automatically retrieves bearer token from storage and adds to Authorization header
  *
  * @param endpoint - API endpoint path
- * @param options - Fetch options (method, headers, body, etc.)
+ * @param options - Fetch options (method, headers, body, timeout, etc.)
  * @returns Parsed JSON response
  * @throws Error if token not found or request fails
  */
 export const authenticatedApiCall = async <T = any>(
   endpoint: string,
-  options?: RequestInit
+  options?: ApiCallOptions
 ): Promise<T> => {
   const token = await getBearerToken();
 
@@ -189,8 +212,8 @@ export const authenticatedApiCall = async <T = any>(
 /**
  * Authenticated GET request
  */
-export const authenticatedGet = async <T = any>(endpoint: string): Promise<T> => {
-  return authenticatedApiCall<T>(endpoint, { method: "GET" });
+export const authenticatedGet = async <T = any>(endpoint: string, options?: ApiCallOptions): Promise<T> => {
+  return authenticatedApiCall<T>(endpoint, { ...options, method: "GET" });
 };
 
 /**
@@ -198,9 +221,11 @@ export const authenticatedGet = async <T = any>(endpoint: string): Promise<T> =>
  */
 export const authenticatedPost = async <T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options?: ApiCallOptions
 ): Promise<T> => {
   return authenticatedApiCall<T>(endpoint, {
+    ...options,
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -211,9 +236,11 @@ export const authenticatedPost = async <T = any>(
  */
 export const authenticatedPut = async <T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options?: ApiCallOptions
 ): Promise<T> => {
   return authenticatedApiCall<T>(endpoint, {
+    ...options,
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -224,9 +251,11 @@ export const authenticatedPut = async <T = any>(
  */
 export const authenticatedPatch = async <T = any>(
   endpoint: string,
-  data: any
+  data: any,
+  options?: ApiCallOptions
 ): Promise<T> => {
   return authenticatedApiCall<T>(endpoint, {
+    ...options,
     method: "PATCH",
     body: JSON.stringify(data),
   });
@@ -235,6 +264,6 @@ export const authenticatedPatch = async <T = any>(
 /**
  * Authenticated DELETE request
  */
-export const authenticatedDelete = async <T = any>(endpoint: string): Promise<T> => {
-  return authenticatedApiCall<T>(endpoint, { method: "DELETE" });
+export const authenticatedDelete = async <T = any>(endpoint: string, options?: ApiCallOptions): Promise<T> => {
+  return authenticatedApiCall<T>(endpoint, { ...options, method: "DELETE" });
 };

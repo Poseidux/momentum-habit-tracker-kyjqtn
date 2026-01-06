@@ -18,7 +18,7 @@ export default function AddHabitScreen() {
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [timesPerWeek, setTimesPerWeek] = useState(3);
   const [selectedColor, setSelectedColor] = useState(HABIT_COLORS[0]);
-  const [selectedIcon, setSelectedIcon] = useState(HABIT_ICONS[0]);
+  const [selectedIconIndex, setSelectedIconIndex] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTags, setCustomTags] = useState<string[]>([]);
   const [customIconUri, setCustomIconUri] = useState<string | null>(null);
@@ -64,6 +64,7 @@ export default function AddHabitScreen() {
     }
 
     try {
+      const selectedIcon = HABIT_ICONS[selectedIconIndex];
       await addHabit({
         title: title.trim(),
         description: description.trim(),
@@ -72,7 +73,7 @@ export default function AddHabitScreen() {
         specificDays: selectedSchedule === 'specific_days' ? selectedDays : undefined,
         timesPerWeek: selectedSchedule === 'x_per_week' ? timesPerWeek : undefined,
         color: selectedColor,
-        icon: selectedIcon,
+        icon: selectedIcon.emoji,
         customIconUrl: customIconUri || undefined,
         tags: [...selectedTags, ...customTags],
       } as any);
@@ -421,19 +422,14 @@ export default function AddHabitScreen() {
                   style={[
                     styles.iconOption,
                     { backgroundColor: theme.colors.card },
-                    selectedIcon === icon && { backgroundColor: theme.colors.primary + '30' },
+                    selectedIconIndex === index && { backgroundColor: theme.colors.primary + '30' },
                   ]}
                   onPress={() => {
-                    setSelectedIcon(icon);
+                    setSelectedIconIndex(index);
                     setCustomIconUri(null);
                   }}
                 >
-                  <IconSymbol 
-                    ios_icon_name={icon.ios} 
-                    android_material_icon_name={icon.android} 
-                    size={24} 
-                    color={selectedIcon === icon ? theme.colors.primary : theme.colors.text} 
-                  />
+                  <Text style={{ fontSize: 24 }}>{icon.emoji}</Text>
                 </TouchableOpacity>
               ))}
               {/* Custom Icon Upload */}

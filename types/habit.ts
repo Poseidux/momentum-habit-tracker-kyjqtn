@@ -1,6 +1,5 @@
 
 export type HabitType = 'yes_no' | 'count' | 'duration';
-
 export type HabitSchedule = 'daily' | 'specific_days' | 'x_per_week';
 
 export interface Habit {
@@ -9,19 +8,17 @@ export interface Habit {
   description?: string;
   type: HabitType;
   schedule: HabitSchedule;
-  scheduleDays?: number[]; // 0-6 for specific days
-  scheduleCount?: number; // for x_per_week
+  specificDays?: number[]; // 0-6 for Sun-Sat
+  timesPerWeek?: number;
+  reminderTime?: string;
   tags: string[];
   color: string;
-  icon: string | { ios: string; android: string };
+  icon: string;
   customIcon?: string;
-  reminderTime?: string;
+  customIconUrl?: string;
   createdAt: string;
-  streak: number;
-  currentStreak: number;
-  longestStreak: number;
-  consistency: number;
-  habitStrength: number;
+  userId?: string;
+  currentStreak?: number;
 }
 
 export interface HabitCheckIn {
@@ -32,16 +29,17 @@ export interface HabitCheckIn {
   note?: string;
   mood?: number;
   effort?: number;
+  createdAt: string;
 }
 
 export interface UserStats {
-  totalHabits: number;
-  totalCheckIns: number;
+  xp: number;
+  level: number;
   currentStreak: number;
   longestStreak: number;
-  level: number;
-  xp: number;
-  badges: string[];
+  consistency: number;
+  habitStrength: number;
+  totalCheckIns: number;
 }
 
 export const HABIT_COLORS = [
@@ -49,12 +47,25 @@ export const HABIT_COLORS = [
   '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'
 ];
 
-export const HABIT_ICONS = [
-  'checkmark.circle', 'star', 'heart', 'flame', 'bolt',
-  'leaf', 'drop', 'moon', 'sun.max', 'figure.walk'
+export interface HabitIcon {
+  ios: string;
+  android: string;
+  emoji: string;
+}
+
+export const HABIT_ICONS: HabitIcon[] = [
+  { ios: 'flame.fill', android: 'local-fire-department', emoji: '🔥' },
+  { ios: 'heart.fill', android: 'favorite', emoji: '❤️' },
+  { ios: 'star.fill', android: 'star', emoji: '⭐' },
+  { ios: 'bolt.fill', android: 'bolt', emoji: '⚡' },
+  { ios: 'leaf.fill', android: 'eco', emoji: '🍃' },
+  { ios: 'drop.fill', android: 'water-drop', emoji: '💧' },
+  { ios: 'moon.fill', android: 'nightlight', emoji: '🌙' },
+  { ios: 'sun.max.fill', android: 'wb-sunny', emoji: '☀️' },
+  { ios: 'sparkles', android: 'auto-awesome', emoji: '✨' },
+  { ios: 'book.fill', android: 'menu-book', emoji: '📚' },
 ];
 
 export const HABIT_TAGS = [
-  'Health', 'Fitness', 'Study', 'Work', 'Mindfulness',
-  'Social', 'Creative', 'Finance', 'Home', 'Personal'
+  'Health', 'Fitness', 'Mind', 'Study', 'Work', 'Social', 'Creative', 'Finance'
 ];
