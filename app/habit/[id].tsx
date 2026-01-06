@@ -1,53 +1,37 @@
 
-import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { IconSymbol } from '@/components/IconSymbol';
-import { colors } from '@/styles/commonStyles';
+import React from 'react';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import { useHabits } from '@/hooks/useHabits';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconSymbol } from '@/components/IconSymbol';
 
-function HabitDetailScreenContent() {
-  const theme = useTheme();
+export default function HabitDetailScreen() {
+  const { theme } = useAppTheme();
   const router = useRouter();
-  const { id } = useLocalSearchParams();
   const { habits, deleteHabit } = useHabits();
+  const { id } = useLocalSearchParams();
 
   const habit = habits.find(h => h.id === id);
-
-  if (!habit) {
-    return (
-      <>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: 'Habit Details',
-            headerBackTitle: 'Back',
-          }}
-        />
-        <View style={[styles.container, { backgroundColor: theme.dark ? colors.backgroundDark : colors.background }]}>
-          <Text style={[styles.errorText, { color: theme.dark ? colors.textDark : colors.text }]}>
-            Habit not found
-          </Text>
-        </View>
-      </>
-    );
-  }
 
   const handleDelete = () => {
     Alert.alert(
       'Delete Habit',
-      `Are you sure you want to delete "${habit.title}"? This action cannot be undone.`,
+      'Are you sure you want to delete this habit? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteHabit(habit.id);
-            router.back();
+            try {
+              await deleteHabit(id as string);
+              router.back();
+            } catch (error) {
+              console.error('Error deleting habit:', error);
+              Alert.alert('Error', 'Failed to delete habit');
+            }
           },
         },
       ]
@@ -55,225 +39,92 @@ function HabitDetailScreenContent() {
   };
 
   const getStrengthColor = () => {
-    if (habit.habitStrength >= 70) return colors.strengthStrong;
-    if (habit.habitStrength >= 40) return colors.strengthMedium;
-    return colors.strengthWeak;
+    const strength = habit?.currentStreak || 0;
+    if (strength >= 21) return theme.colors.success;
+    if (strength >= 7) return theme.colors.primary;
+    return theme.colors.textSecondary;
   };
 
+  if (!habit) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+        <Text style={[styles.errorText, { color: theme.colors.text }]}>Habit not found</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]} edges={['top']}>
       <Stack.Screen
         options={{
-          headerShown: true,
-          title: habit.title,
-          headerBackTitle: 'Back',
-          headerStyle: {
-            backgroundColor: theme.dark ? colors.backgroundDark : colors.background,
-          },
-          headerTintColor: theme.dark ? colors.textDark : colors.text,
+          title: habit.name,
+          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTintColor: theme.colors.text,
         }}
       />
-      <SafeAreaView 
-        style={[styles.container, { backgroundColor: theme.dark ? colors.backgroundDark : colors.background }]}
-        edges={['bottom']}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.iconContainer, { backgroundColor: habit.color || theme.colors.primary }]}>
+          <Text style={styles.iconEmoji}>{habit.icon.emoji}</Text>
+        </View>
+
+        <Text style={[styles.habitName, { color: theme.colors.text }]}>{habit.name}</Text>
+        {habit.description && (
+          <Text style={[styles.habitDescription, { color: theme.colors.textSecondary }]}>
+            {habit.description}
+          </Text>
+        )}
+
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: theme.colors.surface + 'CC' }]}>
+            <Text style={[styles.statValue, { color: theme.colors.primary }]}>
+              {habit.currentStreak || 0}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Day Streak</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: theme.colors.surface + 'CC' }]}>
+            <Text style={[styles.statValue, { color: getStrengthColor() }]}>
+              {Math.min(100, ((habit.currentStreak || 0) / 21) * 100).toFixed(0)}%
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Strength</Text>
+          </View>
+        </View>
+
+        <View style={styles.detailsContainer}>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Type:</Text>
+            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+              {habit.type === 'yes_no' ? 'Yes/No' : habit.type === 'count' ? 'Count' : 'Duration'}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Schedule:</Text>
+            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+              {habit.schedule === 'daily' ? 'Daily' : habit.schedule === 'weekly' ? `${habit.timesPerWeek}x per week` : 'Specific Days'}
+            </Text>
+          </View>
+          {habit.tags && habit.tags.length > 0 && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Tags:</Text>
+              <View style={styles.tagsContainer}>
+                {habit.tags.map((tag, index) => (
+                  <View key={`tag-${index}`} style={[styles.tag, { backgroundColor: theme.colors.primary }]}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.deleteButton, { backgroundColor: theme.colors.error }]}
+          onPress={handleDelete}
         >
-          {/* Habit Header */}
-          <View style={[
-            styles.headerCard,
-            { 
-              backgroundColor: habit.color + '15',
-              borderColor: habit.color + '30',
-            }
-          ]}>
-            <View style={[styles.iconContainer, { backgroundColor: habit.color }]}>
-              <IconSymbol
-                ios_icon_name={habit.icon}
-                android_material_icon_name={habit.icon}
-                size={48}
-                color="#FFFFFF"
-              />
-            </View>
-            <Text style={[styles.habitTitle, { color: habit.color }]}>
-              {habit.title}
-            </Text>
-            {habit.description && (
-              <Text style={[styles.habitDescription, { color: habit.color }]}>
-                {habit.description}
-              </Text>
-            )}
-            <View style={styles.tagsContainer}>
-              {habit.tags.map((tag, index) => (
-                <View key={index} style={[styles.tag, { backgroundColor: habit.color }]}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Stats Grid */}
-          <View style={styles.statsGrid}>
-            <View style={[
-              styles.statCard,
-              { 
-                backgroundColor: theme.dark ? colors.cardDark : colors.card,
-                borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-              }
-            ]}>
-              <IconSymbol
-                ios_icon_name="local-fire-department"
-                android_material_icon_name="local-fire-department"
-                size={32}
-                color={colors.warning}
-              />
-              <Text style={[styles.statValue, { color: theme.dark ? colors.textDark : colors.text }]}>
-                {habit.currentStreak}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Current Streak
-              </Text>
-            </View>
-
-            <View style={[
-              styles.statCard,
-              { 
-                backgroundColor: theme.dark ? colors.cardDark : colors.card,
-                borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-              }
-            ]}>
-              <IconSymbol
-                ios_icon_name="star"
-                android_material_icon_name="star"
-                size={32}
-                color={colors.xpGold}
-              />
-              <Text style={[styles.statValue, { color: theme.dark ? colors.textDark : colors.text }]}>
-                {habit.longestStreak}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Best Streak
-              </Text>
-            </View>
-
-            <View style={[
-              styles.statCard,
-              { 
-                backgroundColor: theme.dark ? colors.cardDark : colors.card,
-                borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-              }
-            ]}>
-              <IconSymbol
-                ios_icon_name="check-circle"
-                android_material_icon_name="check-circle"
-                size={32}
-                color={colors.success}
-              />
-              <Text style={[styles.statValue, { color: theme.dark ? colors.textDark : colors.text }]}>
-                {habit.totalCompletions}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Total Check-ins
-              </Text>
-            </View>
-
-            <View style={[
-              styles.statCard,
-              { 
-                backgroundColor: theme.dark ? colors.cardDark : colors.card,
-                borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-              }
-            ]}>
-              <IconSymbol
-                ios_icon_name="trending-up"
-                android_material_icon_name="trending-up"
-                size={32}
-                color={colors.primary}
-              />
-              <Text style={[styles.statValue, { color: theme.dark ? colors.textDark : colors.text }]}>
-                {habit.consistencyPercent}%
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Consistency
-              </Text>
-            </View>
-          </View>
-
-          {/* Habit Strength */}
-          <View style={[
-            styles.strengthCard,
-            { 
-              backgroundColor: theme.dark ? colors.cardDark : colors.card,
-              borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-            }
-          ]}>
-            <Text style={[styles.sectionTitle, { color: theme.dark ? colors.textDark : colors.text }]}>
-              Habit Strength
-            </Text>
-            <View style={styles.strengthBar}>
-              <View 
-                style={[
-                  styles.strengthFill, 
-                  { 
-                    width: `${habit.habitStrength}%`,
-                    backgroundColor: getStrengthColor()
-                  }
-                ]} 
-              />
-            </View>
-            <Text style={[styles.strengthPercent, { color: getStrengthColor() }]}>
-              {habit.habitStrength}% Strong
-            </Text>
-            <Text style={[styles.strengthDescription, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-              Keep checking in daily to build a stronger habit!
-            </Text>
-          </View>
-
-          {/* Calendar Heatmap Placeholder */}
-          <View style={[
-            styles.calendarCard,
-            { 
-              backgroundColor: theme.dark ? colors.cardDark : colors.card,
-              borderColor: theme.dark ? colors.cardBorderDark : colors.cardBorder,
-            }
-          ]}>
-            <Text style={[styles.sectionTitle, { color: theme.dark ? colors.textDark : colors.text }]}>
-              Activity Calendar
-            </Text>
-            <View style={styles.calendarPlaceholder}>
-              <IconSymbol
-                ios_icon_name="calendar-today"
-                android_material_icon_name="calendar-today"
-                size={48}
-                color={theme.dark ? colors.textSecondaryDark : colors.textSecondary}
-              />
-              <Text style={[styles.placeholderText, { color: theme.dark ? colors.textSecondaryDark : colors.textSecondary }]}>
-                Calendar heatmap coming soon
-              </Text>
-            </View>
-          </View>
-
-          {/* Delete Button */}
-          <TouchableOpacity
-            style={[styles.deleteButton, { backgroundColor: colors.danger }]}
-            onPress={handleDelete}
-          >
-            <IconSymbol
-              ios_icon_name="delete"
-              android_material_icon_name="delete"
-              size={20}
-              color="#FFFFFF"
-            />
-            <Text style={styles.deleteButtonText}>Delete Habit</Text>
-          </TouchableOpacity>
-
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </>
+          <IconSymbol name="delete" size={20} color="#FFFFFF" />
+          <Text style={styles.deleteButtonText}>Delete Habit</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -285,154 +136,102 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 40,
-  },
-  headerCard: {
-    borderRadius: 20,
-    padding: 24,
+    padding: 20,
     alignItems: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
   },
   iconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  habitTitle: {
+  iconEmoji: {
+    fontSize: 40,
+  },
+  habitName: {
     fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontWeight: 'bold',
     marginBottom: 8,
+    textAlign: 'center',
   },
   habitDescription: {
     fontSize: 16,
-    fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+  },
+  detailsContainer: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  detailLabel: {
+    fontSize: 16,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    justifyContent: 'center',
   },
   tag: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   tagText: {
-    fontSize: 13,
-    fontWeight: '600',
     color: '#FFFFFF',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 24,
-  },
-  statCard: {
-    width: '48%',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  strengthCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  strengthBar: {
-    height: 12,
-    backgroundColor: colors.backgroundAlt,
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  strengthFill: {
-    height: '100%',
-    borderRadius: 6,
-  },
-  strengthPercent: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  strengthDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-  },
-  calendarCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
-    elevation: 2,
-  },
-  calendarPlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  placeholderText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 12,
+    fontSize: 12,
+    fontWeight: '600',
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    padding: 16,
     gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    width: '100%',
   },
   deleteButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+  },
+  errorText: {
+    textAlign: 'center',
+    marginTop: 50,
+    fontSize: 16,
   },
 });
-
-export default function HabitDetailScreen() {
-  return (
-    <ProtectedRoute>
-      <HabitDetailScreenContent />
-    </ProtectedRoute>
-  );
-}
