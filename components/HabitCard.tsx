@@ -1,13 +1,12 @@
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
   withSpring,
   withSequence,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { IconSymbol } from './IconSymbol';
 import { useTheme } from '@react-navigation/native';
 import { colors } from '@/styles/commonStyles';
@@ -29,7 +28,10 @@ export default function HabitCard({ habit, onCheckIn, onPress, isCheckedToday = 
   }));
 
   const handleCheckIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Haptics feedback (native only)
+    if (Platform.OS !== 'web') {
+      // Optional: Add haptics if needed
+    }
     scale.value = withSequence(
       withSpring(0.95, { damping: 10 }),
       withSpring(1, { damping: 10 })

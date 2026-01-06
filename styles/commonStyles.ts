@@ -44,6 +44,13 @@ export const colors = {
   // XP and gamification
   xpGold: '#FBBF24',
   levelBadge: '#8B5CF6',
+  
+  // Streak colors
+  streakGold: '#F59E0B',
+  streakSilver: '#94A3B8',
+  
+  // Error state
+  error: '#EF4444',
 };
 
 export const buttonStyles = StyleSheet.create({

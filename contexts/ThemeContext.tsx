@@ -1,193 +1,136 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
 import { authenticatedGet, authenticatedPost, isBackendConfigured } from '@/utils/api';
 
-export interface ThemeColors {
+const THEME_STORAGE_KEY = '@momentum_theme';
+
+export interface AppTheme {
   id: string;
   name: string;
   primary: string;
-  primaryDark: string;
   secondary: string;
-  accent: string;
-  success: string;
   background: string;
-  backgroundDark: string;
-  card: string;
-  cardDark: string;
+  surface: string;
   text: string;
-  textDark: string;
   textSecondary: string;
-  textSecondaryDark: string;
+  accent: string;
 }
 
-export const THEMES: ThemeColors[] = [
+export const THEMES: AppTheme[] = [
   {
-    id: 'default',
+    id: 'ocean',
     name: 'Ocean Breeze',
-    primary: '#6366F1',
-    primaryDark: '#4F46E5',
-    secondary: '#8B5CF6',
-    accent: '#EC4899',
-    success: '#10B981',
-    background: '#F8FAFC',
-    backgroundDark: '#0F172A',
-    card: '#FFFFFF',
-    cardDark: '#1E293B',
-    text: '#1E293B',
-    textDark: '#F1F5F9',
+    primary: '#0EA5E9',
+    secondary: '#06B6D4',
+    background: '#F0F9FF',
+    surface: '#FFFFFF',
+    text: '#0C4A6E',
     textSecondary: '#64748B',
-    textSecondaryDark: '#94A3B8',
+    accent: '#38BDF8'
   },
   {
     id: 'sunset',
     name: 'Sunset Glow',
     primary: '#F97316',
-    primaryDark: '#EA580C',
     secondary: '#FB923C',
-    accent: '#FBBF24',
-    success: '#10B981',
     background: '#FFF7ED',
-    backgroundDark: '#1C1917',
-    card: '#FFFFFF',
-    cardDark: '#292524',
-    text: '#1C1917',
-    textDark: '#FEF3C7',
-    textSecondary: '#78716C',
-    textSecondaryDark: '#A8A29E',
+    surface: '#FFFFFF',
+    text: '#7C2D12',
+    textSecondary: '#78350F',
+    accent: '#FDBA74'
   },
   {
     id: 'forest',
     name: 'Forest Green',
-    primary: '#059669',
-    primaryDark: '#047857',
-    secondary: '#10B981',
-    accent: '#34D399',
-    success: '#22C55E',
+    primary: '#10B981',
+    secondary: '#34D399',
     background: '#F0FDF4',
-    backgroundDark: '#14532D',
-    card: '#FFFFFF',
-    cardDark: '#166534',
-    text: '#14532D',
-    textDark: '#D1FAE5',
-    textSecondary: '#6B7280',
-    textSecondaryDark: '#9CA3AF',
+    surface: '#FFFFFF',
+    text: '#064E3B',
+    textSecondary: '#065F46',
+    accent: '#6EE7B7'
   },
   {
     id: 'lavender',
-    name: 'Lavender Dreams',
-    primary: '#A855F7',
-    primaryDark: '#9333EA',
-    secondary: '#C084FC',
-    accent: '#E879F9',
-    success: '#10B981',
+    name: 'Lavender Dream',
+    primary: '#A78BFA',
+    secondary: '#C4B5FD',
     background: '#FAF5FF',
-    backgroundDark: '#3B0764',
-    card: '#FFFFFF',
-    cardDark: '#581C87',
-    text: '#3B0764',
-    textDark: '#F3E8FF',
-    textSecondary: '#6B7280',
-    textSecondaryDark: '#C4B5FD',
+    surface: '#FFFFFF',
+    text: '#5B21B6',
+    textSecondary: '#7C3AED',
+    accent: '#DDD6FE'
   },
   {
     id: 'midnight',
-    name: 'Midnight Blue',
+    name: 'Midnight',
     primary: '#3B82F6',
-    primaryDark: '#2563EB',
     secondary: '#60A5FA',
-    accent: '#38BDF8',
-    success: '#10B981',
-    background: '#EFF6FF',
-    backgroundDark: '#0C4A6E',
-    card: '#FFFFFF',
-    cardDark: '#075985',
-    text: '#0C4A6E',
-    textDark: '#DBEAFE',
-    textSecondary: '#64748B',
-    textSecondaryDark: '#BAE6FD',
-  },
+    background: '#0F172A',
+    surface: '#1E293B',
+    text: '#F1F5F9',
+    textSecondary: '#CBD5E1',
+    accent: '#93C5FD'
+  }
 ];
 
 interface ThemeContextType {
-  currentTheme: ThemeColors;
-  setTheme: (themeId: string) => void;
-  themes: ThemeColors[];
+  theme: AppTheme;
+  setTheme: (themeId: string) => Promise<void>;
+  themes: AppTheme[];
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = '@momentum_theme';
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [currentTheme, setCurrentTheme] = useState<ThemeColors>(THEMES[0]);
+  const [theme, setThemeState] = useState<AppTheme>(THEMES[0]);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadTheme();
-  }, []);
+  }, [user]);
 
   const loadTheme = async () => {
     try {
-      // Try to load from backend first (if configured and user is authenticated)
-      if (isBackendConfigured()) {
-        try {
-          console.log('[Theme] Fetching active theme from backend...');
-          const response = await authenticatedGet<any>('/api/themes/active');
-          console.log('[Theme] Active theme response:', response);
-          
-          if (response?.themeId) {
-            const theme = THEMES.find(t => t.id === response.themeId);
-            if (theme) {
-              console.log('[Theme] Loaded theme from backend:', theme.name);
-              setCurrentTheme(theme);
-              await AsyncStorage.setItem(THEME_STORAGE_KEY, theme.id);
-              return;
-            }
-          }
-        } catch (error: any) {
-          console.log('[Theme] Could not load theme from backend (using local):', error.message);
+      if (user && isBackendConfigured()) {
+        const data = await authenticatedGet('/api/themes/active');
+        if (data?.themeId) {
+          const found = THEMES.find(t => t.id === data.themeId);
+          if (found) setThemeState(found);
         }
-      }
-
-      // Fall back to local storage
-      const savedThemeId = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedThemeId) {
-        const theme = THEMES.find(t => t.id === savedThemeId);
-        if (theme) {
-          console.log('[Theme] Loaded theme from local storage:', theme.name);
-          setCurrentTheme(theme);
+      } else {
+        const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (stored) {
+          const found = THEMES.find(t => t.id === stored);
+          if (found) setThemeState(found);
         }
       }
     } catch (error) {
-      console.error('[Theme] Failed to load theme:', error);
+      console.error('[ThemeContext] Error loading theme:', error);
     }
   };
 
   const setTheme = async (themeId: string) => {
     try {
-      const theme = THEMES.find(t => t.id === themeId);
-      if (theme) {
-        setCurrentTheme(theme);
+      const found = THEMES.find(t => t.id === themeId);
+      if (!found) return;
+
+      setThemeState(found);
+
+      if (user && isBackendConfigured()) {
+        await authenticatedPost('/api/themes/activate', { themeId });
+      } else {
         await AsyncStorage.setItem(THEME_STORAGE_KEY, themeId);
-        
-        // Sync to backend if configured
-        if (isBackendConfigured()) {
-          try {
-            console.log('[Theme] Activating theme on backend:', themeId);
-            await authenticatedPost('/api/themes/activate', { themeId });
-            console.log('[Theme] Theme synced to backend');
-          } catch (error: any) {
-            console.log('[Theme] Could not sync theme to backend:', error.message);
-          }
-        }
       }
     } catch (error) {
-      console.error('[Theme] Failed to save theme:', error);
+      console.error('[ThemeContext] Error setting theme:', error);
     }
   };
 
   return (
-    <ThemeContext.Provider value={{ currentTheme, setTheme, themes: THEMES }}>
+    <ThemeContext.Provider value={{ theme, setTheme, themes: THEMES }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -195,7 +138,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useAppTheme() {
   const context = useContext(ThemeContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAppTheme must be used within ThemeProvider');
   }
   return context;
