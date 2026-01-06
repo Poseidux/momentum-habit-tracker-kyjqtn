@@ -13,7 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 const FREE_HABIT_LIMIT = 3;
 
 export default function TodayScreen() {
-  const { theme } = useAppTheme();
+  const { currentTheme } = useAppTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { habits, loading, refreshHabits, checkInHabit } = useHabits();
@@ -21,6 +21,11 @@ export default function TodayScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const isPremium = user?.isPremium || false;
+
+  useEffect(() => {
+    refreshHabits();
+    refreshCheckIns();
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -49,6 +54,7 @@ export default function TodayScreen() {
       await refreshCheckIns();
       Alert.alert('Success', 'Habit checked in!');
     } catch (error: any) {
+      console.error('Check-in error:', error);
       Alert.alert('Error', error.message || 'Failed to check in');
     }
   };
@@ -59,14 +65,14 @@ export default function TodayScreen() {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]} 
+      style={[styles.container, { backgroundColor: currentTheme.colors.background }]} 
       edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Today</Text>
+        <Text style={[styles.title, { color: currentTheme.colors.text }]}>Today</Text>
         <TouchableOpacity onPress={handleAddHabit} style={styles.addButton}>
           <LinearGradient
-            colors={[theme.colors.primary, theme.colors.secondary]}
+            colors={[currentTheme.colors.primary, currentTheme.colors.secondary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.addButtonGradient}
@@ -93,16 +99,16 @@ export default function TodayScreen() {
             entering={FadeInDown.duration(600)} 
             style={styles.emptyState}
           >
-            <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.cardBackground }]}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: currentTheme.colors.surface }]}>
               <IconSymbol 
-                ios_icon_name="checkmark.circle" 
+                ios_icon_name="checkmark.circle.fill" 
                 android_material_icon_name="check-circle" 
                 size={64} 
-                color={theme.colors.primary} 
+                color={currentTheme.colors.primary} 
               />
             </View>
-            <Text style={[styles.emptyText, { color: theme.colors.text }]}>No habits yet</Text>
-            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: currentTheme.colors.text }]}>No habits yet</Text>
+            <Text style={[styles.emptySubtext, { color: currentTheme.colors.textSecondary }]}>
               Tap + to create your first habit
             </Text>
           </Animated.View>
@@ -117,7 +123,7 @@ export default function TodayScreen() {
                   entering={FadeInDown.delay(index * 100).duration(500)}
                 >
                   <TouchableOpacity
-                    style={[styles.habitCard, { backgroundColor: theme.colors.surface }]}
+                    style={[styles.habitCard, { backgroundColor: currentTheme.colors.surface }]}
                     onPress={() => router.push(`/habit/${habit.id}` as any)}
                     activeOpacity={0.7}
                   >
@@ -127,12 +133,12 @@ export default function TodayScreen() {
                       </View>
                       
                       <View style={styles.habitInfo}>
-                        <Text style={[styles.habitTitle, { color: theme.colors.text }]}>
+                        <Text style={[styles.habitTitle, { color: currentTheme.colors.text }]}>
                           {habit.title}
                         </Text>
                         {habit.description && (
                           <Text 
-                            style={[styles.habitDescription, { color: theme.colors.textSecondary }]}
+                            style={[styles.habitDescription, { color: currentTheme.colors.textSecondary }]}
                             numberOfLines={1}
                           >
                             {habit.description}
@@ -141,12 +147,12 @@ export default function TodayScreen() {
                         <View style={styles.habitStats}>
                           <View style={styles.statItem}>
                             <IconSymbol 
-                              ios_icon_name="flame" 
+                              ios_icon_name="flame.fill" 
                               android_material_icon_name="local-fire-department" 
                               size={14} 
-                              color={theme.colors.primary} 
+                              color={currentTheme.colors.primary} 
                             />
-                            <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+                            <Text style={[styles.statText, { color: currentTheme.colors.textSecondary }]}>
                               {habit.currentStreak || 0} day streak
                             </Text>
                           </View>
@@ -156,7 +162,7 @@ export default function TodayScreen() {
                       <TouchableOpacity
                         style={[
                           styles.checkButton,
-                          checkedIn && { backgroundColor: theme.colors.success }
+                          checkedIn && { backgroundColor: currentTheme.colors.success }
                         ]}
                         onPress={() => !checkedIn && handleCheckIn(habit.id)}
                         disabled={checkedIn}
@@ -169,7 +175,7 @@ export default function TodayScreen() {
                             color="#FFFFFF" 
                           />
                         ) : (
-                          <View style={[styles.checkCircle, { borderColor: theme.colors.primary }]} />
+                          <View style={[styles.checkCircle, { borderColor: currentTheme.colors.primary }]} />
                         )}
                       </TouchableOpacity>
                     </View>
@@ -184,22 +190,22 @@ export default function TodayScreen() {
         {!isPremium && (
           <Animated.View 
             entering={FadeInDown.delay(habits.length * 100 + 200).duration(500)}
-            style={[styles.freeUserBanner, { backgroundColor: theme.colors.surface }]}
+            style={[styles.freeUserBanner, { backgroundColor: currentTheme.colors.surface }]}
           >
             <View style={styles.bannerContent}>
               <IconSymbol 
-                ios_icon_name="info.circle" 
+                ios_icon_name="info.circle.fill" 
                 android_material_icon_name="info" 
                 size={20} 
-                color={theme.colors.primary} 
+                color={currentTheme.colors.primary} 
               />
-              <Text style={[styles.bannerText, { color: theme.colors.text }]}>
+              <Text style={[styles.bannerText, { color: currentTheme.colors.text }]}>
                 {habits.length}/{FREE_HABIT_LIMIT} free habits used
               </Text>
             </View>
             {habits.length >= FREE_HABIT_LIMIT && (
               <TouchableOpacity
-                style={[styles.upgradeButton, { backgroundColor: theme.colors.primary }]}
+                style={[styles.upgradeButton, { backgroundColor: currentTheme.colors.primary }]}
                 onPress={() => router.push('/auth/sign-in' as any)}
               >
                 <Text style={styles.upgradeButtonText}>Upgrade</Text>

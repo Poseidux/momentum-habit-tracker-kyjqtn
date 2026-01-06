@@ -1,9 +1,11 @@
+
 /* eslint-disable */
 
+// CRITICAL FIX: Exclude LinearGradient from editable wrapping
 const EDITABLE_ELEMENTS = ["Text", "View", "TouchableOpacity", "Icon"];
 const PAGES_PATH = "/app/";
 const EDITABLE_PATHS = ["/app/", "/components/"];
-const OMITTED_PATHS = ["/node_modules/"];
+const OMITTED_PATHS = ["/node_modules/", "LinearGradient"];
 
 module.exports = {
   EDITABLE_ELEMENTS,

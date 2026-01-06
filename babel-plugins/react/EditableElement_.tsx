@@ -25,6 +25,10 @@ export const getType = (el: any): ElementTypes | undefined => {
   if (el?.type?.name === "Icon") return "Icon";
   if (el?.type?.type?.displayName === "TouchableOpacity")
     return "TouchableOpacity";
+  
+  // CRITICAL FIX: Exclude LinearGradient to prevent colors prop corruption
+  if (el?.type?.displayName === "LinearGradient") return undefined;
+  if (el?.type?.name === "LinearGradient") return undefined;
 
   return undefined;
 };
@@ -46,12 +50,6 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
   } = useContext(EditableContext);
 
   const { children } = _props;
-  
-  // Early return if children is invalid
-  if (!children || !children.props) {
-    return children;
-  }
-
   const { props } = children;
 
   // If we are not running in the web the windows will causes
@@ -62,11 +60,11 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
 
   const type = getType(children);
   
-  // If type is undefined (unrecognized component like LinearGradient), return as-is
+  // CRITICAL FIX: If type is undefined (like LinearGradient), return unwrapped
   if (!type) {
-    return children;
+    return cloneElement(children, props);
   }
-
+  
   const __sourceLocation = props.__sourceLocation;
   const __trace = props.__trace;
   const id = __trace.join("");
@@ -148,7 +146,7 @@ export default function EditableElement_(_props: PropsWithChildren<any>) {
       children: children.props.children,
     });
   }
-
-  // Fallback for any other recognized types
-  return children;
+  
+  // Fallback: return unwrapped
+  return cloneElement(children, props);
 }

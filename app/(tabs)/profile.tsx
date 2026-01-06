@@ -18,6 +18,7 @@ export default function ProfileScreen() {
       await signOut();
       Alert.alert('Success', 'Signed out successfully');
     } catch (error) {
+      console.error('Sign out error:', error);
       Alert.alert('Error', 'Failed to sign out');
     }
   };
@@ -40,41 +41,41 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: currentTheme.background }]} 
+      style={[styles.container, { backgroundColor: currentTheme.colors.background }]} 
       edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: currentTheme.text }]}>Profile</Text>
+        <Text style={[styles.title, { color: currentTheme.colors.text }]}>Profile</Text>
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {/* User Info Card */}
-        <View style={[styles.card, { backgroundColor: currentTheme.card }]}>
+        <View style={[styles.card, { backgroundColor: currentTheme.colors.surface }]}>
           {user ? (
             <>
-              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.primary + '20' }]}>
+              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.colors.primary + '20' }]}>
                 <IconSymbol 
-                  ios_icon_name="person" 
+                  ios_icon_name="person.fill" 
                   android_material_icon_name="person" 
                   size={40} 
-                  color={currentTheme.primary} 
+                  color={currentTheme.colors.primary} 
                 />
               </View>
-              <Text style={[styles.userName, { color: currentTheme.text }]}>
+              <Text style={[styles.userName, { color: currentTheme.colors.text }]}>
                 {user.name || user.email}
               </Text>
-              <Text style={[styles.userEmail, { color: currentTheme.textSecondary }]}>
+              <Text style={[styles.userEmail, { color: currentTheme.colors.textSecondary }]}>
                 {user.email}
               </Text>
               {user.isPremium && (
-                <View style={[styles.premiumBadge, { backgroundColor: currentTheme.accent + '20' }]}>
+                <View style={[styles.premiumBadge, { backgroundColor: currentTheme.colors.warning + '20' }]}>
                   <IconSymbol 
-                    ios_icon_name="star" 
+                    ios_icon_name="star.fill" 
                     android_material_icon_name="star" 
                     size={16} 
-                    color={currentTheme.accent} 
+                    color={currentTheme.colors.warning} 
                   />
-                  <Text style={[styles.premiumText, { color: currentTheme.accent }]}>
+                  <Text style={[styles.premiumText, { color: currentTheme.colors.warning }]}>
                     Premium
                   </Text>
                 </View>
@@ -82,18 +83,18 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.primary + '20' }]}>
+              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.colors.primary + '20' }]}>
                 <IconSymbol 
                   ios_icon_name="person" 
                   android_material_icon_name="person" 
                   size={40} 
-                  color={currentTheme.primary} 
+                  color={currentTheme.colors.primary} 
                 />
               </View>
-              <Text style={[styles.userName, { color: currentTheme.text }]}>
+              <Text style={[styles.userName, { color: currentTheme.colors.text }]}>
                 Free User
               </Text>
-              <Text style={[styles.userEmail, { color: currentTheme.textSecondary }]}>
+              <Text style={[styles.userEmail, { color: currentTheme.colors.textSecondary }]}>
                 Limited to 3 habits
               </Text>
             </>
@@ -102,37 +103,37 @@ export default function ProfileScreen() {
 
         {/* Themes Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Themes</Text>
-          <Text style={[styles.sectionSubtitle, { color: currentTheme.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Themes</Text>
+          <Text style={[styles.sectionSubtitle, { color: currentTheme.colors.textSecondary }]}>
             Choose your preferred color scheme
           </Text>
           
           <View style={styles.themesGrid}>
-            {THEMES.map((theme, index) => (
+            {THEMES.map((theme) => (
               <React.Fragment key={theme.id}>
                 <TouchableOpacity
                   style={[
                     styles.themeCard,
-                    { backgroundColor: currentTheme.card },
+                    { backgroundColor: currentTheme.colors.surface },
                     currentTheme.id === theme.id && { 
                       borderWidth: 2, 
-                      borderColor: currentTheme.primary 
+                      borderColor: currentTheme.colors.primary 
                     }
                   ]}
                   onPress={() => handleThemeSelect(theme.id)}
                   activeOpacity={0.7}
                 >
                   <LinearGradient
-                    colors={[theme.primary, theme.secondary]}
+                    colors={[theme.colors.primary, theme.colors.secondary]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.themePreview}
                   />
-                  <Text style={[styles.themeName, { color: currentTheme.text }]}>
+                  <Text style={[styles.themeName, { color: currentTheme.colors.text }]}>
                     {theme.name}
                   </Text>
                   {currentTheme.id === theme.id && (
-                    <View style={[styles.activeIndicator, { backgroundColor: currentTheme.primary }]}>
+                    <View style={[styles.activeIndicator, { backgroundColor: currentTheme.colors.primary }]}>
                       <IconSymbol 
                         ios_icon_name="checkmark" 
                         android_material_icon_name="check" 
@@ -149,20 +150,20 @@ export default function ProfileScreen() {
 
         {/* Settings Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Settings</Text>
+          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Settings</Text>
           
           <TouchableOpacity 
-            style={[styles.settingItem, { backgroundColor: currentTheme.card }]}
+            style={[styles.settingItem, { backgroundColor: currentTheme.colors.surface }]}
             onPress={() => router.push('/habit-groups' as any)}
           >
             <View style={styles.settingLeft}>
               <IconSymbol 
-                ios_icon_name="people" 
+                ios_icon_name="person.3.fill" 
                 android_material_icon_name="group" 
                 size={24} 
-                color={currentTheme.primary} 
+                color={currentTheme.colors.primary} 
               />
-              <Text style={[styles.settingText, { color: currentTheme.text }]}>
+              <Text style={[styles.settingText, { color: currentTheme.colors.text }]}>
                 Habit Groups
               </Text>
             </View>
@@ -170,54 +171,54 @@ export default function ProfileScreen() {
               ios_icon_name="chevron.right" 
               android_material_icon_name="chevron-right" 
               size={20} 
-              color={currentTheme.textSecondary} 
+              color={currentTheme.colors.textSecondary} 
             />
           </TouchableOpacity>
         </View>
 
         {/* Account Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Account</Text>
+          <Text style={[styles.sectionTitle, { color: currentTheme.colors.text }]}>Account</Text>
           
           {user ? (
             <TouchableOpacity 
-              style={[styles.settingItem, { backgroundColor: currentTheme.card }]}
+              style={[styles.settingItem, { backgroundColor: currentTheme.colors.surface }]}
               onPress={handleSignOut}
             >
               <View style={styles.settingLeft}>
                 <IconSymbol 
-                  ios_icon_name="exit" 
+                  ios_icon_name="rectangle.portrait.and.arrow.right" 
                   android_material_icon_name="exit-to-app" 
                   size={24} 
-                  color={currentTheme.accent} 
+                  color={currentTheme.colors.warning} 
                 />
-                <Text style={[styles.settingText, { color: currentTheme.text }]}>
+                <Text style={[styles.settingText, { color: currentTheme.colors.text }]}>
                   Sign Out
                 </Text>
               </View>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={[styles.settingItem, { backgroundColor: currentTheme.card }]}
+              style={[styles.settingItem, { backgroundColor: currentTheme.colors.surface }]}
               onPress={handleSignIn}
             >
               <View style={styles.settingLeft}>
                 <IconSymbol 
-                  ios_icon_name="login" 
+                  ios_icon_name="arrow.right.circle.fill" 
                   android_material_icon_name="login" 
                   size={24} 
-                  color={currentTheme.primary} 
+                  color={currentTheme.colors.primary} 
                 />
-                <Text style={[styles.settingText, { color: currentTheme.text }]}>
+                <Text style={[styles.settingText, { color: currentTheme.colors.text }]}>
                   Upgrade to Premium
                 </Text>
               </View>
-              <View style={[styles.premiumBadge, { backgroundColor: currentTheme.accent + '20' }]}>
+              <View style={[styles.premiumBadge, { backgroundColor: currentTheme.colors.warning + '20' }]}>
                 <IconSymbol 
-                  ios_icon_name="star" 
+                  ios_icon_name="star.fill" 
                   android_material_icon_name="star" 
                   size={14} 
-                  color={currentTheme.accent} 
+                  color={currentTheme.colors.warning} 
                 />
               </View>
             </TouchableOpacity>

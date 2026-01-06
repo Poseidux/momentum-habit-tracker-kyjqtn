@@ -120,8 +120,8 @@ export default function FloatingTabBar({
         <View style={[styles.outerGlow, { borderRadius }]}>
           <LinearGradient
             colors={[
-              currentTheme.primary + '20',
-              currentTheme.secondary + '20'
+              currentTheme.colors.primary + '20',
+              currentTheme.colors.secondary + '20'
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -134,7 +134,7 @@ export default function FloatingTabBar({
               <View style={[
                 styles.background,
                 {
-                  backgroundColor: currentTheme.card + 'D9',
+                  backgroundColor: currentTheme.colors.surface + 'D9',
                 }
               ]} />
               
@@ -142,8 +142,8 @@ export default function FloatingTabBar({
               <Animated.View style={[styles.indicatorWrapper, indicatorStyle]}>
                 <LinearGradient
                   colors={[
-                    currentTheme.primary + '30',
-                    currentTheme.secondary + '30'
+                    currentTheme.colors.primary + '30',
+                    currentTheme.colors.secondary + '30'
                   ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
@@ -151,7 +151,7 @@ export default function FloatingTabBar({
                     styles.indicator,
                     { 
                       width: `${tabWidthPercent}%` as `${number}%`,
-                      borderColor: currentTheme.primary + '50'
+                      borderColor: currentTheme.colors.primary + '50'
                     }
                   ]}
                 />
@@ -174,8 +174,8 @@ export default function FloatingTabBar({
                             <View style={styles.activeIconContainer}>
                               <LinearGradient
                                 colors={[
-                                  currentTheme.primary + '30',
-                                  currentTheme.secondary + '30'
+                                  currentTheme.colors.primary + '30',
+                                  currentTheme.colors.secondary + '30'
                                 ]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 1 }}
@@ -185,7 +185,7 @@ export default function FloatingTabBar({
                                   android_material_icon_name={tab.icon}
                                   ios_icon_name={tab.icon}
                                   size={26}
-                                  color={currentTheme.primary}
+                                  color={currentTheme.colors.primary}
                                 />
                               </LinearGradient>
                             </View>
@@ -194,15 +194,15 @@ export default function FloatingTabBar({
                               android_material_icon_name={tab.icon}
                               ios_icon_name={tab.icon}
                               size={24}
-                              color={currentTheme.textSecondary}
+                              color={currentTheme.colors.textSecondary}
                             />
                           )}
                           <Text
                             style={[
                               styles.tabLabel,
-                              { color: currentTheme.textSecondary },
+                              { color: currentTheme.colors.textSecondary },
                               isActive && { 
-                                color: currentTheme.primary, 
+                                color: currentTheme.colors.primary, 
                                 fontWeight: '700',
                               },
                             ]}

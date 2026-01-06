@@ -1,3 +1,4 @@
+
 /* eslint-disable */
 
 const _path = require("path");
@@ -19,7 +20,7 @@ const _addImportStatement = (t, p, identifier, importPath) => {
 
   const importDecl = t.importDeclaration(
     [t.importDefaultSpecifier(t.identifier(identifier))],
-    t.stringLiteral(importPath) // 👈 adjust path here
+    t.stringLiteral(importPath)
   );
   p.unshiftContainer("body", importDecl);
 };
@@ -45,6 +46,10 @@ const wrapElementsInEdit = (t, path, state) => {
   if (!openingName || openingName.type !== "JSXIdentifier") return;
 
   const elementName = openingName.name;
+  
+  // CRITICAL FIX: Never wrap LinearGradient components
+  if (elementName === "LinearGradient") return;
+  
   if (!EDITABLE_ELEMENTS.includes(elementName)) return;
 
   // avoid double wrapping
@@ -119,7 +124,7 @@ module.exports = function ({ types: t }) {
         const filename = state.file.opts.filename || "";
 
         if (_isEditableFile(filename)) {
-          wrapElementsInEdit(t, path);
+          wrapElementsInEdit(t, path, state);
         }
       },
     },
