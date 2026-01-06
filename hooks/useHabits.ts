@@ -198,7 +198,13 @@ export function useUserStats() {
         const response = await authenticatedGet('/api/user/stats');
         if (response.ok) {
           const data = await response.json();
-          setStats(data.stats || stats);
+          setStats(data.stats || {
+            totalXP: 0,
+            level: 1,
+            currentStreak: 0,
+            totalHabits: 0,
+            xp: 0,
+          });
           return;
         }
       }
