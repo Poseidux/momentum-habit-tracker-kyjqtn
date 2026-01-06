@@ -9,9 +9,13 @@ import { HabitType, HabitSchedule, HABIT_COLORS, HABIT_ICONS, HABIT_TAGS } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+const FREE_HABIT_LIMIT = 3;
 
 export default function AddHabitScreen() {
-  const { addHabit } = useHabits();
+  const { addHabit, habits } = useHabits();
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -20,20 +24,10 @@ export default function AddHabitScreen() {
   const [selectedIcon, setSelectedIcon] = useState(HABIT_ICONS[0]);
   const [selectedColor, setSelectedColor] = useState(HABIT_COLORS[0]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [customTags, setCustomTags] = useState<string[]>([]);
-  const [customTagInput, setCustomTagInput] = useState('');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
-  const [timesPerWeek, setTimesPerWeek] = useState('3');
-  const [goal, setGoal] = useState('');
-  const [customIconUrl, setCustomIconUrl] = useState<string | undefined>();
-  const { theme } = useAppTheme();
+  const [scheduleCount, setScheduleCount] = useState('3');
+  const { currentTheme } = useAppTheme();
   const router = useRouter();
-
-  useEffect(() => {
-    if (title.trim() || description.trim() || selectedTags.length > 0 || customTags.length > 0) {
-      // Form has data
-    }
-  }, [title, description, selectedTags, customTags]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -41,19 +35,27 @@ export default function AddHabitScreen() {
       return;
     }
 
+    if (!user && habits.length >= FREE_HABIT_LIMIT) {
+      Alert.alert(
+        'Upgrade to Premium',
+        `Free users can create up to ${FREE_HABIT_LIMIT} habits. Sign in to unlock unlimited habits!`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       await addHabit({
-        name: title,
+        title,
         description,
         type: selectedType,
-        icon: selectedIcon,
-        customIconUrl,
         schedule: selectedSchedule,
-        days: selectedDays.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]),
-        timesPerWeek: selectedSchedule === 'weekly' ? parseInt(timesPerWeek) : undefined,
-        goal: goal ? parseInt(goal) : undefined,
-        tags: [...selectedTags, ...customTags],
+        scheduleDays: selectedSchedule === 'specific_days' ? selectedDays : undefined,
+        scheduleCount: selectedSchedule === 'x_per_week' ? parseInt(scheduleCount) : undefined,
+        icon: selectedIcon,
         color: selectedColor,
+        tags: selectedTags,
+        createdAt: new Date().toISOString(),
       });
       Alert.alert('Success', 'Habit created successfully!');
       router.back();
@@ -79,267 +81,201 @@ export default function AddHabitScreen() {
     );
   };
 
-  const handleAddCustomTag = () => {
-    if (customTagInput.trim() && !customTags.includes(customTagInput.trim())) {
-      setCustomTags([...customTags, customTagInput.trim()]);
-      setCustomTagInput('');
-    }
-  };
-
-  const removeCustomTag = (tag: string) => {
-    setCustomTags(customTags.filter(t => t !== tag));
-  };
-
-  const pickCustomIcon = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setCustomIconUrl(result.assets[0].uri);
-    }
-  };
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]} edges={['top']}>
       <Stack.Screen
         options={{
-          title: 'Add Habit',
-          headerShown: true,
-          headerStyle: { backgroundColor: theme.colors.surface },
-          headerTintColor: theme.colors.text,
+          headerShown: false,
         }}
       />
+      
+      <LinearGradient
+        colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
+            <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Create Habit</Text>
+          <View style={styles.backButton} />
+        </View>
+      </LinearGradient>
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Habit Name *</Text>
+        <Animated.View entering={FadeInDown.delay(100)} style={styles.section}>
+          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Habit Name *</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: theme.colors.surface + 'CC', color: theme.colors.text, borderColor: theme.colors.primary }]}
+            style={[styles.input, { backgroundColor: currentTheme.colors.surface, color: currentTheme.colors.text, borderColor: currentTheme.colors.primary + '30' }]}
             value={title}
             onChangeText={setTitle}
             placeholder="e.g., Morning Run"
-            placeholderTextColor={theme.colors.textSecondary}
+            placeholderTextColor={currentTheme.colors.textSecondary}
           />
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Description</Text>
+        <Animated.View entering={FadeInDown.delay(200)} style={styles.section}>
+          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Description</Text>
           <TextInput
-            style={[styles.input, styles.textArea, { backgroundColor: theme.colors.surface + 'CC', color: theme.colors.text, borderColor: theme.colors.primary }]}
+            style={[styles.input, styles.textArea, { backgroundColor: currentTheme.colors.surface, color: currentTheme.colors.text, borderColor: currentTheme.colors.primary + '30' }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Add a description..."
-            placeholderTextColor={theme.colors.textSecondary}
+            placeholderTextColor={currentTheme.colors.textSecondary}
             multiline
             numberOfLines={3}
           />
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Type</Text>
+        <Animated.View entering={FadeInDown.delay(300)} style={styles.section}>
+          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Type</Text>
           <View style={styles.optionsRow}>
             {(['yes_no', 'count', 'duration'] as HabitType[]).map((type, index) => (
-              <TouchableOpacity
-                key={`type-${index}`}
-                style={[
-                  styles.optionButton,
-                  { borderColor: theme.colors.primary },
-                  selectedType === type && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => setSelectedType(type)}
-              >
-                <Text style={[styles.optionText, { color: selectedType === type ? '#FFFFFF' : theme.colors.text }]}>
-                  {type === 'yes_no' ? 'Yes/No' : type === 'count' ? 'Count' : 'Duration'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Schedule</Text>
-          <View style={styles.optionsRow}>
-            {(['daily', 'weekly', 'specific_days'] as HabitSchedule[]).map((schedule, index) => (
-              <TouchableOpacity
-                key={`schedule-${index}`}
-                style={[
-                  styles.optionButton,
-                  { borderColor: theme.colors.primary },
-                  selectedSchedule === schedule && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => setSelectedSchedule(schedule)}
-              >
-                <Text style={[styles.optionText, { color: selectedSchedule === schedule ? '#FFFFFF' : theme.colors.text }]}>
-                  {schedule === 'daily' ? 'Daily' : schedule === 'weekly' ? 'Weekly' : 'Specific Days'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {selectedSchedule === 'specific_days' && (
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Select Days</Text>
-            <View style={styles.daysRow}>
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <React.Fragment key={`type-${index}`}>
                 <TouchableOpacity
-                  key={`day-${index}`}
                   style={[
-                    styles.dayButton,
-                    { borderColor: theme.colors.primary },
-                    selectedDays.includes(index) && { backgroundColor: theme.colors.primary }
+                    styles.optionButton,
+                    { borderColor: currentTheme.colors.primary + '30' },
+                    selectedType === type && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
                   ]}
-                  onPress={() => toggleDay(index)}
+                  onPress={() => setSelectedType(type)}
                 >
-                  <Text style={[styles.dayText, { color: selectedDays.includes(index) ? '#FFFFFF' : theme.colors.text }]}>
-                    {day}
+                  <Text style={[styles.optionText, { color: selectedType === type ? '#FFFFFF' : currentTheme.colors.text }]}>
+                    {type === 'yes_no' ? 'Yes/No' : type === 'count' ? 'Count' : 'Duration'}
                   </Text>
                 </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(400)} style={styles.section}>
+          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Schedule</Text>
+          <View style={styles.optionsRow}>
+            {(['daily', 'specific_days', 'x_per_week'] as HabitSchedule[]).map((schedule, index) => (
+              <React.Fragment key={`schedule-${index}`}>
+                <TouchableOpacity
+                  style={[
+                    styles.optionButton,
+                    { borderColor: currentTheme.colors.primary + '30' },
+                    selectedSchedule === schedule && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
+                  ]}
+                  onPress={() => setSelectedSchedule(schedule)}
+                >
+                  <Text style={[styles.optionText, { color: selectedSchedule === schedule ? '#FFFFFF' : currentTheme.colors.text }]}>
+                    {schedule === 'daily' ? 'Daily' : schedule === 'specific_days' ? 'Specific Days' : 'X per Week'}
+                  </Text>
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+        </Animated.View>
+
+        {selectedSchedule === 'specific_days' && (
+          <Animated.View entering={FadeInDown.delay(500)} style={styles.section}>
+            <Text style={[styles.label, { color: currentTheme.colors.text }]}>Select Days</Text>
+            <View style={styles.daysRow}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                <React.Fragment key={`day-${index}`}>
+                  <TouchableOpacity
+                    style={[
+                      styles.dayButton,
+                      { borderColor: currentTheme.colors.primary + '30' },
+                      selectedDays.includes(index) && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
+                    ]}
+                    onPress={() => toggleDay(index)}
+                  >
+                    <Text style={[styles.dayText, { color: selectedDays.includes(index) ? '#FFFFFF' : currentTheme.colors.text }]}>
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                </React.Fragment>
               ))}
             </View>
-          </View>
+          </Animated.View>
         )}
 
-        {selectedSchedule === 'weekly' && (
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>Times per Week</Text>
+        {selectedSchedule === 'x_per_week' && (
+          <Animated.View entering={FadeInDown.delay(500)} style={styles.section}>
+            <Text style={[styles.label, { color: currentTheme.colors.text }]}>Times per Week</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: theme.colors.surface + 'CC', color: theme.colors.text, borderColor: theme.colors.primary }]}
-              value={timesPerWeek}
-              onChangeText={setTimesPerWeek}
+              style={[styles.input, { backgroundColor: currentTheme.colors.surface, color: currentTheme.colors.text, borderColor: currentTheme.colors.primary + '30' }]}
+              value={scheduleCount}
+              onChangeText={setScheduleCount}
               keyboardType="number-pad"
               placeholder="3"
-              placeholderTextColor={theme.colors.textSecondary}
+              placeholderTextColor={currentTheme.colors.textSecondary}
             />
-          </View>
+          </Animated.View>
         )}
 
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Icon</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.iconsScroll}>
-            {HABIT_ICONS.map((icon, index) => (
-              <TouchableOpacity
-                key={`icon-${index}`}
-                style={[
-                  styles.iconButton,
-                  { borderColor: theme.colors.primary },
-                  selectedIcon === icon && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => setSelectedIcon(icon)}
-              >
-                <Text style={styles.iconEmoji}>{icon.emoji}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.iconButton, { borderColor: theme.colors.primary }]}
-              onPress={pickCustomIcon}
-            >
-              <IconSymbol name="photo" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-          </ScrollView>
-          {customIconUrl && (
-            <Image source={{ uri: customIconUrl }} style={styles.customIconPreview} />
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Color</Text>
+        <Animated.View entering={FadeInDown.delay(600)} style={styles.section}>
+          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Color</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorsScroll}>
             {HABIT_COLORS.map((color, index) => (
-              <TouchableOpacity
-                key={`color-${index}`}
-                style={[
-                  styles.colorButton,
-                  { backgroundColor: color },
-                  selectedColor === color && styles.colorButtonSelected
-                ]}
-                onPress={() => setSelectedColor(color)}
-              />
+              <React.Fragment key={`color-${index}`}>
+                <TouchableOpacity
+                  style={[
+                    styles.colorButton,
+                    { backgroundColor: color },
+                    selectedColor === color && styles.colorButtonSelected
+                  ]}
+                  onPress={() => setSelectedColor(color)}
+                >
+                  {selectedColor === color && (
+                    <IconSymbol ios_icon_name="checkmark" android_material_icon_name="check" size={20} color="#FFF" />
+                  )}
+                </TouchableOpacity>
+              </React.Fragment>
             ))}
           </ScrollView>
-        </View>
+        </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: theme.colors.text }]}>Tags</Text>
+        <Animated.View entering={FadeInDown.delay(700)} style={styles.section}>
+          <Text style={[styles.label, { color: currentTheme.colors.text }]}>Tags</Text>
           <View style={styles.tagsContainer}>
             {HABIT_TAGS.map((tag, index) => (
-              <TouchableOpacity
-                key={`tag-${index}`}
-                style={[
-                  styles.tagButton,
-                  { borderColor: theme.colors.primary },
-                  selectedTags.includes(tag) && { backgroundColor: theme.colors.primary }
-                ]}
-                onPress={() => toggleTag(tag)}
-              >
-                <Text style={[styles.tagText, { color: selectedTags.includes(tag) ? '#FFFFFF' : theme.colors.text }]}>
-                  {tag}
-                </Text>
-              </TouchableOpacity>
+              <React.Fragment key={`tag-${index}`}>
+                <TouchableOpacity
+                  style={[
+                    styles.tagButton,
+                    { borderColor: currentTheme.colors.primary + '30' },
+                    selectedTags.includes(tag) && { backgroundColor: currentTheme.colors.primary, borderColor: currentTheme.colors.primary }
+                  ]}
+                  onPress={() => toggleTag(tag)}
+                >
+                  <Text style={[styles.tagText, { color: selectedTags.includes(tag) ? '#FFFFFF' : currentTheme.colors.text }]}>
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              </React.Fragment>
             ))}
           </View>
-          <View style={styles.customTagRow}>
-            <TextInput
-              style={[styles.input, styles.customTagInput, { backgroundColor: theme.colors.surface + 'CC', color: theme.colors.text, borderColor: theme.colors.primary }]}
-              value={customTagInput}
-              onChangeText={setCustomTagInput}
-              placeholder="Add custom tag"
-              placeholderTextColor={theme.colors.textSecondary}
-            />
-            <TouchableOpacity
-              style={[styles.addTagButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleAddCustomTag}
-            >
-              <IconSymbol name="add" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-          {customTags.length > 0 && (
-            <View style={styles.customTagsContainer}>
-              {customTags.map((tag, index) => (
-                <View key={`custom-tag-${index}`} style={[styles.customTag, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={styles.customTagText}>{tag}</Text>
-                  <TouchableOpacity onPress={() => removeCustomTag(tag)}>
-                    <IconSymbol name="close" size={16} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+        </Animated.View>
 
-        {(selectedType === 'count' || selectedType === 'duration') && (
-          <View style={styles.section}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Goal {selectedType === 'count' ? '(count)' : '(minutes)'}
-            </Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.colors.surface + 'CC', color: theme.colors.text, borderColor: theme.colors.primary }]}
-              value={goal}
-              onChangeText={setGoal}
-              keyboardType="number-pad"
-              placeholder={selectedType === 'count' ? '10' : '30'}
-              placeholderTextColor={theme.colors.textSecondary}
-            />
-          </View>
-        )}
-
-        <View style={styles.buttonRow}>
+        <Animated.View entering={FadeInDown.delay(800)} style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.cancelButton, { borderColor: theme.colors.error }]}
+            style={[styles.button, styles.cancelButton, { borderColor: currentTheme.colors.error }]}
             onPress={handleCancel}
           >
-            <Text style={[styles.buttonText, { color: theme.colors.error }]}>Cancel</Text>
+            <Text style={[styles.buttonText, { color: currentTheme.colors.error }]}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.saveButton, { backgroundColor: theme.colors.primary }]}
+            style={[styles.button, styles.saveButton]}
             onPress={handleSave}
           >
-            <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Save Habit</Text>
+            <LinearGradient
+              colors={currentTheme.colors.gradient || [currentTheme.colors.primary, currentTheme.colors.secondary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.saveButtonGradient}
+            >
+              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Create Habit</Text>
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -348,6 +284,27 @@ export default function AddHabitScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    paddingTop: 16,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
   },
   scrollView: {
     flex: 1,
@@ -362,16 +319,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     fontSize: 16,
   },
   textArea: {
-    height: 80,
+    height: 100,
     textAlignVertical: 'top',
   },
   optionsRow: {
@@ -382,11 +339,11 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 2,
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     alignItems: 'center',
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   daysRow: {
@@ -394,10 +351,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dayButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderWidth: 2,
-    borderRadius: 20,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -405,39 +362,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  iconsScroll: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    width: 56,
-    height: 56,
-    borderWidth: 2,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  iconEmoji: {
-    fontSize: 28,
-  },
-  customIconPreview: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginTop: 12,
-  },
   colorsScroll: {
     flexDirection: 'row',
   },
   colorButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   colorButtonSelected: {
     borderWidth: 3,
     borderColor: '#FFFFFF',
+    transform: [{ scale: 1.1 }],
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -448,43 +392,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   tagText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  customTagRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  customTagInput: {
-    flex: 1,
-  },
-  addTagButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  customTagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  customTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  customTagText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -495,16 +405,29 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   cancelButton: {
     borderWidth: 2,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  saveButton: {},
+  saveButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  saveButtonGradient: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   buttonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

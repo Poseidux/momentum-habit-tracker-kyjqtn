@@ -1,67 +1,49 @@
 
 export type HabitType = 'yes_no' | 'count' | 'duration';
-export type HabitSchedule = 'daily' | 'weekly' | 'specific_days';
-
-export interface HabitIcon {
-  ios: string;
-  android: string;
-  emoji: string;
-}
+export type HabitSchedule = 'daily' | 'specific_days' | 'x_per_week';
 
 export interface Habit {
   id: string;
-  name: string;
+  title: string;
   description?: string;
   type: HabitType;
-  icon: HabitIcon;
-  customIconUrl?: string;
   schedule: HabitSchedule;
-  timesPerWeek?: number;
-  days?: string[];
+  scheduleDays?: number[];
+  scheduleCount?: number;
+  icon?: string;
+  customIcon?: string;
+  color: string;
+  tags: string[];
   reminderTime?: string;
-  goal?: number;
-  currentStreak?: number;
-  tags?: string[];
-  color?: string;
-  createdAt?: string;
+  createdAt: string;
+  streak?: number;
+  strength?: number;
+  totalCheckIns?: number;
 }
 
-export interface HabitCheckIn {
+export interface CheckIn {
   id: string;
   habitId: string;
   date: string;
   value?: number;
-  duration?: number;
   note?: string;
   mood?: number;
   effort?: number;
-}
-
-export interface UserStats {
-  totalXP: number;
-  level: number;
-  currentStreak: number;
-  longestStreak: number;
-  totalCheckIns: number;
-  badges: string[];
+  createdAt: string;
 }
 
 export const HABIT_COLORS = [
-  '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
-  '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'
+  '#6366F1', '#8B5CF6', '#EC4899', '#EF4444',
+  '#F59E0B', '#10B981', '#06B6D4', '#3B82F6',
 ];
 
-export const HABIT_ICONS: HabitIcon[] = [
-  { ios: 'figure.run', android: 'directions_run', emoji: '🏃' },
-  { ios: 'book.fill', android: 'menu_book', emoji: '📚' },
-  { ios: 'drop.fill', android: 'water_drop', emoji: '💧' },
-  { ios: 'moon.zzz.fill', android: 'bedtime', emoji: '😴' },
-  { ios: 'heart.fill', android: 'favorite', emoji: '❤️' },
-  { ios: 'leaf.fill', android: 'eco', emoji: '🌱' },
-  { ios: 'dumbbell.fill', android: 'fitness_center', emoji: '💪' },
-  { ios: 'brain.head.profile', android: 'psychology', emoji: '🧠' },
+export const HABIT_ICONS = [
+  'checkmark.circle', 'star', 'heart', 'flame',
+  'bolt', 'leaf', 'drop', 'moon',
+  'sun.max', 'book', 'dumbbell', 'fork.knife',
 ];
 
 export const HABIT_TAGS = [
-  'Health', 'Fitness', 'Study', 'Work', 'Mind', 'Social', 'Creative', 'Finance'
+  'Health', 'Fitness', 'Mind', 'Study',
+  'Work', 'Social', 'Creative', 'Finance',
 ];

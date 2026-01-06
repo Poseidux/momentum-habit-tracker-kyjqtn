@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from './AuthContext';
 import { authenticatedGet, authenticatedPost, isBackendConfigured } from '@/utils/api';
+import { useAuth } from './AuthContext';
 
 export interface Theme {
   id: string;
@@ -10,110 +10,119 @@ export interface Theme {
   colors: {
     primary: string;
     secondary: string;
+    background: string;
     surface: string;
     text: string;
     textSecondary: string;
     success: string;
+    warning: string;
     error: string;
-    streakGold: string;
-    streakSilver: string;
+    gradient: string[];
   };
 }
 
-export const THEMES: Theme[] = [
+export const PRESET_THEMES: Theme[] = [
+  {
+    id: 'momentum',
+    name: 'Momentum',
+    colors: {
+      primary: '#6366F1',
+      secondary: '#8B5CF6',
+      background: '#0F172A',
+      surface: '#1E293B',
+      text: '#F1F5F9',
+      textSecondary: '#94A3B8',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      gradient: ['#6366F1', '#8B5CF6'],
+    },
+  },
   {
     id: 'ocean',
     name: 'Ocean',
     colors: {
-      primary: '#4ECDC4',
-      secondary: '#45B7D1',
-      surface: '#1A1A2E',
-      text: '#FFFFFF',
-      textSecondary: '#B0B0B0',
-      success: '#52B788',
-      error: '#FF6B6B',
-      streakGold: '#FFD700',
-      streakSilver: '#C0C0C0',
-    },
-  },
-  {
-    id: 'sunset',
-    name: 'Sunset',
-    colors: {
-      primary: '#FF6B6B',
-      secondary: '#FFA07A',
-      surface: '#2D1B2E',
-      text: '#FFFFFF',
-      textSecondary: '#B0B0B0',
-      success: '#52B788',
-      error: '#FF4757',
-      streakGold: '#FFD700',
-      streakSilver: '#C0C0C0',
+      primary: '#06B6D4',
+      secondary: '#0EA5E9',
+      background: '#0C4A6E',
+      surface: '#075985',
+      text: '#F0F9FF',
+      textSecondary: '#BAE6FD',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      gradient: ['#06B6D4', '#0EA5E9'],
     },
   },
   {
     id: 'forest',
     name: 'Forest',
     colors: {
-      primary: '#52B788',
-      secondary: '#95D5B2',
-      surface: '#1B2A1F',
-      text: '#FFFFFF',
-      textSecondary: '#B0B0B0',
-      success: '#74C69D',
-      error: '#FF6B6B',
-      streakGold: '#FFD700',
-      streakSilver: '#C0C0C0',
+      primary: '#10B981',
+      secondary: '#059669',
+      background: '#064E3B',
+      surface: '#065F46',
+      text: '#ECFDF5',
+      textSecondary: '#A7F3D0',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      gradient: ['#10B981', '#059669'],
     },
   },
   {
-    id: 'lavender',
-    name: 'Lavender',
+    id: 'sunset',
+    name: 'Sunset',
     colors: {
-      primary: '#BB8FCE',
-      secondary: '#D7BDE2',
-      surface: '#2A1E2E',
-      text: '#FFFFFF',
-      textSecondary: '#B0B0B0',
-      success: '#52B788',
-      error: '#FF6B6B',
-      streakGold: '#FFD700',
-      streakSilver: '#C0C0C0',
+      primary: '#F59E0B',
+      secondary: '#EF4444',
+      background: '#7C2D12',
+      surface: '#9A3412',
+      text: '#FFF7ED',
+      textSecondary: '#FED7AA',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      gradient: ['#F59E0B', '#EF4444'],
     },
   },
   {
     id: 'midnight',
     name: 'Midnight',
     colors: {
-      primary: '#85C1E2',
-      secondary: '#5DADE2',
-      surface: '#0F1419',
-      text: '#FFFFFF',
-      textSecondary: '#8899A6',
-      success: '#52B788',
-      error: '#FF6B6B',
-      streakGold: '#FFD700',
-      streakSilver: '#C0C0C0',
+      primary: '#8B5CF6',
+      secondary: '#A78BFA',
+      background: '#1E1B4B',
+      surface: '#312E81',
+      text: '#F5F3FF',
+      textSecondary: '#C4B5FD',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      gradient: ['#8B5CF6', '#A78BFA'],
     },
   },
 ];
 
 interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+  currentTheme: Theme;
+  setTheme: (themeId: string) => Promise<void>;
+  themes: Theme[];
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  theme: THEMES[0],
-  setTheme: () => {},
-});
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const useAppTheme = () => useContext(ThemeContext);
-
-const THEME_STORAGE_KEY = '@momentum_theme';
+export const useAppTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useAppTheme must be used within ThemeProvider');
+  }
+  return context;
+};
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [theme, setThemeState] = useState<Theme>(THEMES[0]);
+  const [currentTheme, setCurrentTheme] = useState<Theme>(PRESET_THEMES[0]);
+  const [themes, setThemes] = useState<Theme[]>(PRESET_THEMES);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -125,19 +134,14 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       if (user && isBackendConfigured()) {
         const response = await authenticatedGet('/api/themes/current');
         if (response.theme) {
-          const savedTheme = THEMES.find(t => t.id === response.theme.themeId);
-          if (savedTheme) {
-            setThemeState(savedTheme);
-            return;
-          }
+          const theme = PRESET_THEMES.find(t => t.id === response.theme.themeId) || PRESET_THEMES[0];
+          setCurrentTheme(theme);
         }
-      }
-      
-      const savedThemeId = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedThemeId) {
-        const savedTheme = THEMES.find(t => t.id === savedThemeId);
-        if (savedTheme) {
-          setThemeState(savedTheme);
+      } else {
+        const savedThemeId = await AsyncStorage.getItem('theme');
+        if (savedThemeId) {
+          const theme = PRESET_THEMES.find(t => t.id === savedThemeId) || PRESET_THEMES[0];
+          setCurrentTheme(theme);
         }
       }
     } catch (error) {
@@ -145,13 +149,17 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const setTheme = async (newTheme: Theme) => {
+  const setTheme = async (themeId: string) => {
+    const theme = PRESET_THEMES.find(t => t.id === themeId);
+    if (!theme) return;
+
+    setCurrentTheme(theme);
+
     try {
-      setThemeState(newTheme);
-      await AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme.id);
-      
       if (user && isBackendConfigured()) {
-        await authenticatedPost('/api/themes/set', { themeId: newTheme.id });
+        await authenticatedPost('/api/themes/set', { themeId });
+      } else {
+        await AsyncStorage.setItem('theme', themeId);
       }
     } catch (error) {
       console.error('Error saving theme:', error);
@@ -159,7 +167,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ currentTheme, setTheme, themes }}>
       {children}
     </ThemeContext.Provider>
   );

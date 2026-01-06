@@ -1,35 +1,43 @@
 
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { IconSymbol } from '@/components/IconSymbol';
 import { useAppTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
 import { useHabits, useTodayCheckIns } from '@/hooks/useHabits';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useAuth } from '@/contexts/AuthContext';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
-import { IconSymbol } from '@/components/IconSymbol';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const FREE_HABIT_LIMIT = 3;
 
 export default function TodayScreen() {
-  const { habits, loading, refreshHabits, checkInHabit } = useHabits();
-  const { checkIns, refreshCheckIns } = useTodayCheckIns();
+  const { habits, loading, refreshHabits } = useHabits();
   const { user } = useAuth();
+  const { checkIns, checkIn, refreshCheckIns } = useTodayCheckIns();
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
-  const { theme } = useAppTheme();
+  const { currentTheme } = useAppTheme();
+
+  const [todayHabits, setTodayHabits] = useState<any[]>([]);
 
   useEffect(() => {
-    console.log('TodayScreen mounted, loading habits...');
+    const today = new Date().getDay();
+    const filtered = habits.filter(habit => {
+      if (habit.schedule === 'daily') return true;
+      if (habit.schedule === 'specific_days' && habit.scheduleDays) {
+        return habit.scheduleDays.includes(today);
+      }
+      return true;
+    });
+    setTodayHabits(filtered);
+  }, [habits, checkIns]);
+
+  useEffect(() => {
     refreshHabits();
     refreshCheckIns();
   }, []);
-
-  useEffect(() => {
-    console.log('Habits loaded:', habits.length, 'habits');
-    console.log('Check-ins loaded:', checkIns.length, 'check-ins');
-  }, [habits, checkIns]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -42,10 +50,7 @@ export default function TodayScreen() {
       Alert.alert(
         'Upgrade to Premium',
         `Free users can create up to ${FREE_HABIT_LIMIT} habits. Upgrade to Premium for unlimited habits!`,
-        [
-          { text: 'Maybe Later', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => router.push('/profile') },
-        ]
+        [{ text: 'OK' }]
       );
       return;
     }
@@ -54,13 +59,10 @@ export default function TodayScreen() {
 
   const handleCheckIn = async (habitId: string) => {
     try {
-      console.log('Checking in habit:', habitId);
-      await checkInHabit(habitId, {});
-      await refreshCheckIns();
+      await checkIn(habitId);
       await refreshHabits();
     } catch (error) {
-      console.error('Error checking in habit:', error);
-      Alert.alert('Error', 'Failed to check in habit');
+      Alert.alert('Error', 'Failed to check in');
     }
   };
 
@@ -70,102 +72,84 @@ export default function TodayScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.loadingText, { color: theme.colors.text }]}>Loading...</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]} edges={['top']}>
+        <View style={styles.centerContainer}>
+          <Text style={[styles.loadingText, { color: currentTheme.colors.text }]}>Loading...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.surface }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.colors.background }]} edges={['top']}>
       <LinearGradient
-        colors={[theme.colors.primary + '20', theme.colors.surface]}
-        style={styles.gradient}
+        colors={currentTheme.colors.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
-          }
-        >
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.colors.text }]}>Today</Text>
-            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </Text>
-          </View>
-
-          {habits.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No habits yet</Text>
-              <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-                Create your first habit to get started!
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.habitsList}>
-              {habits.map((habit, index) => {
-                const checkedIn = isCheckedInToday(habit.id);
-                return (
-                  <Animated.View
-                    key={`habit-${habit.id}`}
-                    entering={FadeInDown.delay(index * 100)}
-                  >
-                    <TouchableOpacity
-                      style={[
-                        styles.habitCard,
-                        { backgroundColor: theme.colors.surface + 'CC' },
-                        checkedIn && { borderColor: theme.colors.success, borderWidth: 2 }
-                      ]}
-                      onPress={() => router.push(`/habit/${habit.id}`)}
-                    >
-                      <View style={styles.habitContent}>
-                        <View style={[styles.iconContainer, { backgroundColor: habit.color || theme.colors.primary }]}>
-                          <Text style={styles.iconEmoji}>{habit.icon.emoji}</Text>
-                        </View>
-                        <View style={styles.habitInfo}>
-                          <Text style={[styles.habitName, { color: theme.colors.text }]}>{habit.name}</Text>
-                          {habit.description && (
-                            <Text style={[styles.habitDescription, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                              {habit.description}
-                            </Text>
-                          )}
-                        </View>
-                        <TouchableOpacity
-                          style={[
-                            styles.checkButton,
-                            { backgroundColor: checkedIn ? theme.colors.success : theme.colors.primary }
-                          ]}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            if (!checkedIn) {
-                              handleCheckIn(habit.id);
-                            }
-                          }}
-                        >
-                          <IconSymbol
-                            name={checkedIn ? 'check' : 'add'}
-                            size={24}
-                            color="#FFFFFF"
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </TouchableOpacity>
-                  </Animated.View>
-                );
-              })}
-            </View>
-          )}
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-          onPress={handleAddHabit}
-        >
-          <IconSymbol name="add" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Today</Text>
+        <Text style={styles.headerSubtitle}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
       </LinearGradient>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={currentTheme.colors.primary} />}
+      >
+        {todayHabits.length === 0 ? (
+          <Animated.View entering={FadeInDown.delay(100)} style={styles.emptyState}>
+            <IconSymbol ios_icon_name="calendar" android_material_icon_name="event" size={64} color={currentTheme.colors.textSecondary} />
+            <Text style={[styles.emptyTitle, { color: currentTheme.colors.text }]}>No habits for today</Text>
+            <Text style={[styles.emptySubtitle, { color: currentTheme.colors.textSecondary }]}>
+              Start building momentum by adding your first habit
+            </Text>
+          </Animated.View>
+        ) : (
+          todayHabits.map((habit, index) => {
+            const checked = isCheckedInToday(habit.id);
+            return (
+              <Animated.View key={habit.id} entering={FadeInDown.delay(index * 100)}>
+                <TouchableOpacity
+                  style={[styles.habitCard, { backgroundColor: currentTheme.colors.surface }]}
+                  onPress={() => handleCheckIn(habit.id)}
+                  disabled={checked}
+                >
+                  <View style={styles.habitLeft}>
+                    <View style={[styles.iconContainer, { backgroundColor: habit.color + '20' }]}>
+                      <IconSymbol
+                        ios_icon_name={habit.icon || 'checkmark.circle'}
+                        android_material_icon_name="check-circle"
+                        size={24}
+                        color={habit.color}
+                      />
+                    </View>
+                    <View style={styles.habitInfo}>
+                      <Text style={[styles.habitTitle, { color: currentTheme.colors.text }]}>{habit.title}</Text>
+                      {habit.streak && habit.streak > 0 && (
+                        <View style={styles.streakBadge}>
+                          <IconSymbol ios_icon_name="flame.fill" android_material_icon_name="local-fire-department" size={12} color="#F59E0B" />
+                          <Text style={styles.streakText}>{habit.streak} day streak</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <View style={[styles.checkButton, checked && { backgroundColor: currentTheme.colors.success }]}>
+                    {checked && <IconSymbol ios_icon_name="checkmark" android_material_icon_name="check" size={20} color="#FFF" />}
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })
+        )}
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: currentTheme.colors.primary }]}
+        onPress={handleAddHabit}
+      >
+        <IconSymbol ios_icon_name="plus" android_material_icon_name="add" size={28} color="#FFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -174,99 +158,114 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
+  centerContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+  },
+  header: {
+    padding: 24,
+    paddingTop: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.9)',
   },
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 20,
+  content: {
+    padding: 16,
     paddingBottom: 100,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
   },
   emptyState: {
     alignItems: 'center',
-    marginTop: 100,
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
+    marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
-  },
-  habitsList: {
-    gap: 12,
+    paddingHorizontal: 32,
   },
   habitCard: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  habitContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  habitLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
-  },
-  iconEmoji: {
-    fontSize: 24,
   },
   habitInfo: {
     flex: 1,
   },
-  habitName: {
-    fontSize: 18,
+  habitTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  habitDescription: {
-    fontSize: 14,
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  streakText: {
+    fontSize: 12,
+    color: '#F59E0B',
+    fontWeight: '500',
   },
   checkButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#10B981',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   fab: {
     position: 'absolute',
+    bottom: 90,
     right: 20,
-    bottom: 100,
     width: 56,
     height: 56,
     borderRadius: 28,
-    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });
